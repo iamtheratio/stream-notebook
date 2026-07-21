@@ -104,6 +104,8 @@ A settings window opens. Fill it in like this:
 | **URL** | Click **Copy** on the dashboard, then paste it here |
 | **Width** | `1920` |
 | **Height** | `1080` |
+| **Shutdown source when not visible** | ✅ tick this |
+| **Refresh browser when scene becomes active** | ✅ tick this |
 
 Leave everything else alone.
 
@@ -115,6 +117,8 @@ your vertical scene, and use the dashboard's **vertical** Copy button:
 | **URL** | The **vertical** URL from the dashboard |
 | **Width** | `1080` |
 | **Height** | `1920` |
+| **Shutdown source when not visible** | ✅ tick this |
+| **Refresh browser when scene becomes active** | ✅ tick this |
 
 Both can run at the same time, and each has its own position and size in the
 dashboard.
