@@ -1,0 +1,9 @@
+node_modules/
+
+# Everything user-specific lives here: notes database, OAuth tokens, settings.
+# Never commit it — settings.json holds a Twitch access token.
+data/
+
+npm-debug.log*
+.DS_Store
+Thumbs.db

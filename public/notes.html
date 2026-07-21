@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📓 Notes Manager — WebSocket Server</title>
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --green:#00ff88; --blue:#5dade2; --paper:#fdf6e3; --ink:#2b2b2b;
+    --panel:rgba(255,255,255,0.05); --line:rgba(255,255,255,0.1);
+  }
+  body {
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:16px;
+    background:linear-gradient(135deg,#1a1a2e 0%,#16213e 25%,#0f3460 50%,#1a1a2e 100%);
+    background-attachment:fixed; color:#fff; min-height:100vh;
+  }
+  .wrap { max-width:1500px; margin:0 auto; }
+
+  /* Topbar */
+  .topbar {
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    background:rgba(0,0,0,0.35); backdrop-filter:blur(15px); border:1px solid var(--line);
+    border-radius:12px; padding:9px 16px; margin-bottom:14px;
+  }
+  .tb-title { font-size:1.05em; font-weight:800; letter-spacing:.02em; text-shadow:0 0 20px rgba(0,255,136,.35); }
+  .tb-controls { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .tb-link, .tb-btn {
+    color:#fff; text-decoration:none; padding:5px 12px; border-radius:20px; font-size:13px; cursor:pointer;
+    background:rgba(93,173,226,.13); border:1px solid rgba(93,173,226,.3); transition:all .18s ease; white-space:nowrap;
+  }
+  .tb-link:hover, .tb-btn:hover { background:rgba(93,173,226,.28); transform:translateY(-1px); }
+  .tb-btn.on  { background:rgba(0,255,136,.20); border-color:rgba(0,255,136,.5); color:var(--green); }
+  .tb-btn.off { background:rgba(255,80,80,.16); border-color:rgba(255,80,80,.4); color:#ff8888; }
+  .dot { width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:5px; background:#666; }
+  .dot.live { background:var(--green); box-shadow:0 0 8px var(--green); }
+  .live-badge {
+    font-size:12px; color:#cfe8ff; background:rgba(93,173,226,.12); border:1px solid rgba(93,173,226,.3);
+    padding:4px 10px; border-radius:20px; white-space:nowrap;
+  }
+  .live-badge b { color:var(--green); }
+
+  /* Layout */
+  .grid { display:grid; grid-template-columns:320px 1fr; gap:14px; align-items:start; }
+  @media (max-width:900px){ .grid { grid-template-columns:1fr; } }
+  .card { background:var(--panel); backdrop-filter:blur(15px); border:1px solid var(--line); border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,.3); }
+
+  /* Sidebar */
+  .side { padding:12px; max-height:calc(100vh - 110px); overflow:auto; }
+  .search { width:100%; padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:rgba(0,0,0,.25); color:#fff; font-size:13px; margin-bottom:10px; }
+  .search:focus { outline:none; border-color:rgba(0,255,136,.4); }
+  .game { margin-bottom:6px; }
+  .game-hd {
+    display:flex; align-items:center; gap:7px; padding:8px 10px; border-radius:9px; cursor:pointer; user-select:none;
+    font-weight:700; font-size:15px; color:#e8eef6; transition:background .15s;
+  }
+  .game-hd:hover { background:rgba(255,255,255,.05); }
+  .game-hd.livegame { background:rgba(0,255,136,.08); }
+  .game-hd .caret { transition:transform .15s; color:#8aa; font-size:11px; }
+  .game.collapsed .game-hd .caret { transform:rotate(-90deg); }
+  .game .gtype { font-size:10px; color:#8aa; font-weight:600; margin-left:auto; opacity:.7; }
+  .chapters { padding:2px 0 4px 14px; }
+  .game.collapsed .chapters { display:none; }
+  .chap {
+    display:flex; align-items:center; gap:8px; padding:8px 11px; border-radius:8px; cursor:pointer; font-size:15px; color:#cdd6df;
+    border:1px solid transparent;
+  }
+  .chap:hover { background:rgba(255,255,255,.05); }
+  .chap.sel { background:rgba(93,173,226,.18); border-color:rgba(93,173,226,.4); color:#fff; }
+  .chap.livechap { box-shadow:inset 3px 0 0 var(--green); }
+  .chap .cnt { margin-left:auto; font-size:11px; color:#8aa; background:rgba(0,0,0,.25); padding:1px 7px; border-radius:10px; }
+  .chap .livepin { font-size:10px; color:var(--green); }
+  .addchap-btn { margin-left:6px; width:21px; height:21px; min-width:21px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:15px; line-height:1; color:#8aa; background:rgba(255,255,255,.06); cursor:pointer; opacity:0; transition:all .15s; }
+  .game-hd:hover .addchap-btn { opacity:.8; }
+  .addchap-btn:hover { background:rgba(0,255,136,.18); color:var(--green); opacity:1; }
+  .delgame-btn { margin-left:3px; width:21px; height:21px; min-width:21px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; line-height:1; color:#8aa; background:rgba(255,255,255,.06); cursor:pointer; opacity:0; transition:all .15s; }
+  .game-hd:hover .delgame-btn { opacity:.7; }
+  .delgame-btn:hover { background:rgba(255,70,70,.2); color:#ff9b9b; opacity:1; }
+
+  /* Main panel */
+  .main { padding:0; min-height:420px; display:flex; flex-direction:column; }
+  .main-hd {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--line);
+  }
+  .crumb { font-size:19px; font-weight:700; }
+  .crumb .g { color:#9fb6cc; font-weight:600; }
+  .crumb .sep { color:#566; margin:0 6px; }
+  .main-actions { display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
+  .btn { font-size:12px; padding:5px 11px; border-radius:8px; cursor:pointer; border:1px solid var(--line); background:rgba(255,255,255,.06); color:#e8eef6; transition:all .15s; white-space:nowrap; }
+  .btn:hover { background:rgba(255,255,255,.12); }
+  .btn.primary { background:rgba(0,255,136,.18); border-color:rgba(0,255,136,.45); color:var(--green); }
+  .btn.primary:hover { background:rgba(0,255,136,.28); }
+  .btn.danger:hover { background:rgba(255,70,70,.2); border-color:rgba(255,70,70,.5); color:#ff9b9b; }
+
+  /* Notes list — paper feel */
+  .notes { padding:14px 18px; display:flex; flex-direction:column; gap:9px; flex:1; }
+  .note {
+    display:flex; align-items:center; gap:13px; padding:13px 16px; border-radius:11px;
+    background:rgba(0,0,0,.35); backdrop-filter:blur(8px); color:rgba(255,255,255,.95); box-shadow:0 2px 10px rgba(0,0,0,.25);
+    border-left:5px solid rgba(255,255,255,.14); position:relative;
+  }
+  .note .num {
+    font-weight:800; font-size:23px; color:#c2ccd6; min-width:36px; text-align:right;
+    font-family:'Courier New', monospace; line-height:28px; position:relative; top:2px;
+  }
+  .note .txt { flex:1; font-size:18.5px; line-height:28px; white-space:pre-wrap; word-break:break-word; cursor:text; }
+  .note.done { border-left-color:#3ba55d; opacity:.78; }
+  .note.done .txt { text-decoration:line-through; text-decoration-color:#3ba55d; text-decoration-thickness:2px; }
+  .note.scratched { border-left-color:#ff5b5b; }
+  .note.scratched .txt { text-decoration:line-through; text-decoration-color:#ff6b6b; text-decoration-thickness:2px; opacity:.7; }
+  .note .acts { display:flex; gap:5px; opacity:1; align-self:center; }
+  .iconbtn {
+    border:none; background:rgba(255,255,255,.09); width:34px; height:34px; border-radius:8px; cursor:pointer; font-size:18px;
+    display:flex; align-items:center; justify-content:center; color:#c2ccd6; transition:all .15s;
+  }
+  .iconbtn:hover { background:rgba(255,255,255,.2); }
+  .iconbtn.act-del:hover { background:rgba(255,80,80,.28); }
+  .iconbtn.act-arch:hover { background:rgba(93,173,226,.28); color:#cfe8ff; }
+  .iconbtn.act-unarch:hover { background:rgba(0,255,136,.24); color:var(--green); }
+  .iconbtn.is-on { background:#3ba55d; color:#fff; }
+  .iconbtn.is-on:hover { background:#45b96b; }
+  .iconbtn.scratch-on { background:#c0392b; color:#fff; }
+  .iconbtn.scratch-on:hover { background:#d9483b; }
+  .iconbtn.disabled { opacity:.22; cursor:not-allowed; pointer-events:none; }
+  .editrow { flex:1; display:flex; flex-direction:column; gap:6px; }
+  .editrow textarea { width:100%; min-height:58px; resize:vertical; font:inherit; font-size:17px; line-height:1.5; padding:9px 11px; border-radius:8px; border:1px solid rgba(255,255,255,.2); background:rgba(0,0,0,.45); color:#fff; }
+  .editrow textarea:focus { outline:none; border-color:rgba(0,255,136,.45); }
+  .editrow .ebtns { display:flex; gap:6px; }
+  .esave { background:#3ba55d; color:#fff; border:none; padding:5px 14px; border-radius:7px; cursor:pointer; font-size:12px; font-weight:600; }
+  .ecancel { background:#ddd; color:#444; border:none; padding:5px 12px; border-radius:7px; cursor:pointer; font-size:12px; }
+
+  /* Add note */
+  .addbar { display:flex; gap:8px; padding:12px 18px; border-top:1px solid var(--line); }
+  .addbar textarea {
+    flex:1; min-height:68px; max-height:200px; resize:vertical; font:inherit; font-size:16.5px; padding:10px 13px;
+    border-radius:10px; border:1px solid var(--line); background:rgba(0,0,0,.25); color:#fff;
+  }
+  .addbar textarea:focus { outline:none; border-color:rgba(0,255,136,.4); }
+  .addbtn {
+    align-self:stretch; min-width:108px; padding:0 24px; border:none; border-radius:10px;
+    background:rgba(0,255,136,.20); color:#c2ccd6; cursor:pointer; transition:background .15s;
+    display:flex; align-items:center; justify-content:center; font-size:60px; font-weight:900; line-height:1; -webkit-text-stroke:2.5px currentColor;
+  }
+  .addbtn:hover { background:rgba(0,255,136,.32); }
+  .addbtn span { display:block; transform:translateY(-3px); }
+
+  .empty { text-align:center; color:#8aa; padding:60px 20px; font-size:14px; }
+  .empty .big { font-size:40px; margin-bottom:10px; opacity:.5; }
+
+  /* Toast */
+  #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0;
+    background:rgba(20,20,30,.95); border:1px solid var(--line); padding:10px 18px; border-radius:10px; font-size:13px;
+    transition:all .25s; pointer-events:none; z-index:99; box-shadow:0 6px 24px rgba(0,0,0,.4); }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  #toast.err { border-color:rgba(255,70,70,.5); color:#ff9b9b; }
+
+  /* Custom dialog — NO native browser alert/confirm/prompt (kaizoff-style modal) */
+  .dlg-overlay {
+    position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; padding:20px;
+    background:rgba(8,10,20,.72); backdrop-filter:blur(4px); opacity:0; transition:opacity .18s ease;
+  }
+  .dlg-overlay.show { opacity:1; }
+  .dlg-box {
+    width:100%; max-width:440px; background:linear-gradient(160deg,#1c2438,#141b2c);
+    border:1px solid var(--line); border-radius:16px; box-shadow:0 24px 60px rgba(0,0,0,.55);
+    padding:22px 22px 18px; transform:scale(.94); transition:transform .2s cubic-bezier(.2,.9,.3,1.25);
+  }
+  .dlg-overlay.show .dlg-box { transform:scale(1); }
+  .dlg-title { font-size:17px; font-weight:800; margin:0 0 6px; color:#fff; }
+  .dlg-msg { font-size:13.5px; color:#aebbcc; line-height:1.5; margin-bottom:16px; }
+  .dlg-input { width:100%; padding:10px 13px; border-radius:10px; border:1px solid var(--line); background:rgba(0,0,0,.3); color:#fff; font-size:14px; margin-bottom:16px; }
+  .dlg-input:focus { outline:none; border-color:rgba(0,255,136,.45); box-shadow:0 0 0 3px rgba(0,255,136,.1); }
+  .dlg-btns { display:flex; gap:8px; justify-content:flex-end; }
+  .dlg-btn { padding:8px 18px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid var(--line); background:rgba(255,255,255,.06); color:#dbe4ee; transition:all .15s; }
+  .dlg-btn:hover { background:rgba(255,255,255,.13); }
+  .dlg-btn.ok { background:rgba(0,255,136,.18); border-color:rgba(0,255,136,.5); color:var(--green); }
+  .dlg-btn.ok:hover { background:rgba(0,255,136,.3); }
+  .dlg-btn.danger { background:rgba(255,70,70,.16); border-color:rgba(255,70,70,.45); color:#ff9b9b; }
+  .dlg-btn.danger:hover { background:rgba(255,70,70,.28); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="tb-title">📓 Notes Manager</div>
+    <div class="tb-controls">
+      <span id="liveBadge" class="live-badge">…</span>
+      <button id="ovEnable" class="tb-btn" title="Master enable/disable the on-stream notebook">●</button>
+      <button id="ovVisible" class="tb-btn" title="Show/hide the notebook on stream">●</button>
+      <a class="tb-link" href="/dashboard" target="_blank">🛠 Dashboard</a>
+      <a class="tb-link" href="/stats.html" target="_blank">📊 Stats</a>
+      <span class="live-badge"><span id="connDot" class="dot"></span><span id="connTxt">connecting…</span></span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card side">
+      <input id="search" class="search" placeholder="🔍 Filter games / chapters…" autocomplete="off">
+      <div id="tree"></div>
+    </div>
+    <div class="card main" id="mainPanel">
+      <div class="empty"><div class="big">📓</div>Select a chapter to view its notes.</div>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+let TREE = [], STATE = {}, selChapter = null, collapsed = {}, filterText = '';
+
+function toast(msg, isErr) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'show' + (isErr ? ' err' : '');
+  clearTimeout(t._t); t._t = setTimeout(() => t.className = '', 2600);
+}
+async function api(method, path, body) {
+  const r = await fetch('/api/notes' + path, {
+    method, headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const j = await r.json().catch(() => ({ ok: false, error: 'Bad response' }));
+  if (!j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+// ── Custom dialog (replaces native confirm/prompt — the user hates those) ────
+function dialog({ title='', message='', input=false, value='', placeholder='', ok='OK', cancel='Cancel', danger=false } = {}) {
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.className = 'dlg-overlay'; ov.tabIndex = -1;
+    ov.innerHTML = `<div class="dlg-box" role="dialog" aria-modal="true">
+      ${title ? `<div class="dlg-title">${esc(title)}</div>` : ''}
+      ${message ? `<div class="dlg-msg">${esc(message)}</div>` : ''}
+      ${input ? `<input class="dlg-input" type="text" value="${esc(value)}" placeholder="${esc(placeholder)}">` : ''}
+      <div class="dlg-btns">
+        <button class="dlg-btn cancel">${esc(cancel)}</button>
+        <button class="dlg-btn ${danger ? 'danger' : 'ok'} confirm">${esc(ok)}</button>
+      </div></div>`;
+    document.body.appendChild(ov);
+    requestAnimationFrame(() => ov.classList.add('show'));
+    const inp = ov.querySelector('.dlg-input');
+    if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } else ov.querySelector('.confirm').focus();
+    const close = (result) => { ov.classList.remove('show'); setTimeout(() => ov.remove(), 200); resolve(result); };
+    ov.querySelector('.cancel').onclick = () => close(input ? null : false);
+    ov.querySelector('.confirm').onclick = () => close(input ? (inp.value.trim() || null) : true);
+    ov.addEventListener('mousedown', e => { if (e.target === ov) close(input ? null : false); });
+    ov.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { e.preventDefault(); close(input ? null : false); }
+      else if (e.key === 'Enter') { e.preventDefault(); ov.querySelector('.confirm').click(); }
+    });
+  });
+}
+const confirmDialog = (o) => dialog({ ...o, input: false });
+const promptDialog  = (o) => dialog({ ...o, input: true });
+
+function findChapter(id) {
+  for (const g of TREE) for (const c of g.chapters) if (c.id === id) return { game: g, chapter: c };
+  return null;
+}
+function findGame(id) { return TREE.find(g => g.id === id); }
+
+async function load() {
+  try {
+    const j = await api('GET', '');
+    TREE = j.tree || []; STATE = j.state || {};
+    if (!selChapter || !findChapter(selChapter)) {
+      selChapter = STATE.currentChapterId && findChapter(STATE.currentChapterId) ? STATE.currentChapterId
+                 : (TREE[0] && TREE[0].chapters[0] && TREE[0].chapters[0].id) || null;
+    }
+    render();
+  } catch (e) { toast(e.message, true); }
+}
+
+function render() { renderTopbar(); renderTree(); renderMain(); }
+
+function renderTopbar() {
+  const lb = $('#liveBadge');
+  if (STATE.game) {
+    const ch = findChapter(STATE.currentChapterId);
+    lb.innerHTML = `<span class="dot live"></span>LIVE: <b>${esc(STATE.game)}</b>${ch ? ' › ' + esc(ch.chapter.title) : ''}`;
+  } else lb.innerHTML = `<span class="dot"></span>No live game yet`;
+  const en = $('#ovEnable'); en.textContent = STATE.enabled ? '🔔 Notes ON' : '🔕 Notes OFF';
+  en.className = 'tb-btn ' + (STATE.enabled ? 'on' : 'off');
+  const vis = $('#ovVisible'); vis.textContent = STATE.visible ? '👁 Shown' : '🙈 Hidden';
+  vis.className = 'tb-btn ' + (STATE.visible ? 'on' : '');
+  vis.style.display = STATE.enabled ? '' : 'none';
+}
+
+function renderTree() {
+  const f = filterText.toLowerCase();
+  const wrap = $('#tree'); wrap.innerHTML = '';
+  let shown = 0;
+  for (const g of TREE) {
+    const gMatch = g.name.toLowerCase().includes(f);
+    const chaps = g.chapters.filter(c => !f || gMatch || c.title.toLowerCase().includes(f));
+    if (f && !gMatch && !chaps.length) continue;
+    shown++;
+    const isLiveGame = g.id === STATE.gameId;
+    const col = collapsed[g.id] && !f;
+    const el = document.createElement('div');
+    el.className = 'game' + (col ? ' collapsed' : '');
+    el.innerHTML =
+      `<div class="game-hd${isLiveGame ? ' livegame' : ''}" data-g="${g.id}">
+        <span class="caret">▼</span>${isLiveGame ? '🎮 ' : ''}${esc(g.name)}
+        <span class="gtype">${esc(g.type || '')}</span>
+        <span class="addchap-btn" data-addchap="${g.id}" title="New chapter in ${esc(g.name)}">＋</span>
+        ${isLiveGame ? '' : `<span class="delgame-btn" data-delgame="${g.id}" data-name="${esc(g.name)}" title="Delete this game + all its notes">🗑</span>`}
+      </div>
+      <div class="chapters">
+        ${chaps.map(c => `
+          <div class="chap${c.id === selChapter ? ' sel' : ''}${c.id === STATE.currentChapterId ? ' livechap' : ''}" data-c="${c.id}">
+            ${esc(c.title)}
+            ${c.id === STATE.currentChapterId ? '<span class="livepin">● live</span>' : ''}
+            <span class="cnt">${c.noteCount}</span>
+          </div>`).join('')}
+      </div>`;
+    wrap.appendChild(el);
+  }
+  if (!shown) wrap.innerHTML = '<div class="empty" style="padding:30px 10px">No matches.</div>';
+}
+
+function renderMain() {
+  const panel = $('#mainPanel');
+  const sel = selChapter && findChapter(selChapter);
+  if (!sel) { panel.innerHTML = '<div class="empty"><div class="big">📓</div>Select a chapter to view its notes.</div>'; return; }
+  const { game, chapter } = sel;
+  const isLiveGame = game.id === STATE.gameId;
+  const isLiveChap = chapter.id === STATE.currentChapterId;
+  const doneCount = chapter.notes.filter(n => n.done).length;
+  const isCompletedChap = chapter.title === 'Completed Notes';
+  panel.innerHTML =
+    `<div class="main-hd">
+      <div class="crumb"><span class="g">${esc(game.name)}</span><span class="sep">›</span>${esc(chapter.title)}
+        ${isLiveChap ? '<span class="livepin" style="color:var(--green);font-size:12px"> ● on stream</span>' : ''}</div>
+      <div class="main-actions">
+        ${isLiveGame && !isLiveChap ? `<button class="btn primary" data-switch="${chapter.id}">📌 Make active on stream</button>` : ''}
+        ${doneCount && !isCompletedChap ? `<button class="btn" data-archive="${chapter.id}" title="Move ${doneCount} completed note${doneCount === 1 ? '' : 's'} to “Completed Notes”">🧹 Archive done (${doneCount})</button>` : ''}
+        ${isCompletedChap && chapter.notes.length ? `<button class="btn" data-unarchiveall="${chapter.id}" title="Move all ${chapter.notes.length} note${chapter.notes.length === 1 ? '' : 's'} back to General Notes (re-opened)">↩ Unarchive all (${chapter.notes.length})</button>` : ''}
+        <button class="btn" data-rename="${chapter.id}" data-title="${esc(chapter.title)}">✏️ Rename</button>
+        <button class="btn danger" data-delchap="${chapter.id}" data-title="${esc(chapter.title)}">🗑 Delete chapter</button>
+      </div>
+    </div>
+    <div class="notes" id="notesList">
+      ${chapter.notes.length ? chapter.notes.map(n => noteHtml(n, isCompletedChap)).join('')
+        : '<div class="empty" style="padding:40px 10px">No notes in this chapter yet.</div>'}
+    </div>
+    <div class="addbar">
+      <textarea id="addText" placeholder="Add a note to “${esc(chapter.title)}”…  (Enter to add, Shift+Enter for newline)"></textarea>
+      <button class="addbtn" data-add="${chapter.id}" title="Add note"><span>＋</span></button>
+    </div>`;
+}
+
+function noteHtml(n, inCompleted) {
+  const cls = 'note' + (n.done ? ' done' : '') + (n.scratched ? ' scratched' : '');
+  // Done & scratched are mutually exclusive: when one is set, the OTHER is grayed/disabled.
+  const doneDis = n.scratched ? ' disabled' : '';
+  const scrDis  = n.done ? ' disabled' : '';
+  return `<div class="${cls}" data-note="${n.id}">
+    <div class="num">${n.number}.</div>
+    <div class="txt" data-edit="${n.id}" title="Click to edit">${esc(n.text)}</div>
+    <div class="acts">
+      ${inCompleted
+        ? `<button class="iconbtn act-unarch" data-unarchive="${n.id}" title="Unarchive → back to General Notes (re-opened)">↩</button>`
+        : `<button class="iconbtn act-arch" data-archivenote="${n.id}" title="Archive → Completed Notes (marks done)">📥</button>`}
+      <button class="iconbtn act-done ${n.done ? 'is-on' : ''}${doneDis}" data-toggle="${n.id}" data-field="done" data-val="${n.done ? 0 : 1}" title="${n.scratched ? 'Un-scratch it first' : 'Mark done'}">✓</button>
+      <button class="iconbtn act-scratch ${n.scratched ? 'scratch-on' : ''}${scrDis}" data-toggle="${n.id}" data-field="scratched" data-val="${n.scratched ? 0 : 1}" title="${n.done ? 'Un-check it first' : 'Scratch out'}">✗</button>
+      <button class="iconbtn act-del" data-del="${n.id}" title="Delete">🗑</button>
+    </div>
+  </div>`;
+}
+
+function beginEdit(id) {
+  const note = (findChapter(selChapter).chapter.notes || []).find(n => n.id === id);
+  if (!note) return;
+  const row = document.querySelector(`.note[data-note="${id}"]`);
+  const txt = row.querySelector('.txt');
+  const ed = document.createElement('div');
+  ed.className = 'editrow';
+  ed.innerHTML = `<textarea>${esc(note.text)}</textarea>
+    <div class="ebtns"><button class="esave">Save</button><button class="ecancel">Cancel</button></div>`;
+  txt.replaceWith(ed);
+  const ta = ed.querySelector('textarea'); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+  const save = async () => { try { await api('PUT', '/note/' + id, { text: ta.value }); toast('Note updated'); load(); } catch (e) { toast(e.message, true); } };
+  ed.querySelector('.esave').onclick = save;
+  ed.querySelector('.ecancel').onclick = () => renderMain();
+  ta.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); } if (e.key === 'Escape') renderMain(); };
+}
+
+// ── Event delegation ────────────────────────────────────────────────────────
+document.addEventListener('click', async (e) => {
+  const t = e.target.closest('[data-g],[data-c],[data-addchap],[data-add],[data-toggle],[data-del],[data-edit],[data-switch],[data-rename],[data-delchap],[data-delgame],[data-archive],[data-archivenote],[data-unarchive],[data-unarchiveall]');
+  if (!t) return;
+  try {
+    if (t.dataset.g != null)        { const id = +t.dataset.g; collapsed[id] = !collapsed[id]; renderTree(); }
+    else if (t.dataset.c != null)   { selChapter = +t.dataset.c; render(); }
+    else if (t.dataset.addchap)     {
+      const title = await promptDialog({ title: 'New chapter', placeholder: 'Chapter name…', ok: 'Create' }); if (!title) return;
+      const r = await api('POST', '/chapter', { gameId: +t.dataset.addchap, title }); collapsed[+t.dataset.addchap] = false;
+      if (r.chapter) selChapter = r.chapter.id; toast('Chapter created'); await load();
+    }
+    else if (t.dataset.add)         {
+      const ta = $('#addText'); const text = ta.value.trim(); if (!text) return;
+      await api('POST', '/note', { chapterId: +t.dataset.add, text }); ta.value = ''; load();
+    }
+    else if (t.dataset.toggle)      {
+      if (t.classList.contains('disabled')) return;                 // grayed-out: opposite state is set
+      const id = +t.dataset.toggle, field = t.dataset.field, val = +t.dataset.val === 1;
+      const sel = findChapter(selChapter), note = sel && sel.chapter.notes.find(n => n.id === id);
+      if (note) { note[field] = val; const row = document.querySelector(`.note[data-note="${id}"]`); if (row) row.outerHTML = noteHtml(note); } // optimistic, single-note re-render
+      api('POST', `/note/${id}/toggle`, { field, value: val }).catch(e => { toast(e.message, true); load(); });
+    }
+    else if (t.dataset.del)         { if (await confirmDialog({ title: 'Delete note?', message: 'This permanently removes the note.', danger: true, ok: 'Delete' })) { await api('DELETE', '/note/' + t.dataset.del); toast('Note deleted'); load(); } }
+    else if (t.dataset.edit)        { beginEdit(+t.dataset.edit); }
+    else if (t.dataset.switch)      { const r = await api('POST', `/chapter/${t.dataset.switch}/switch`); toast(r.switched ? 'Now active on stream' : 'Only the live game can be shown'); load(); }
+    else if (t.dataset.archive)     { const r = await api('POST', `/chapter/${t.dataset.archive}/archive-done`); toast(r.moved ? `Moved ${r.moved} completed note${r.moved === 1 ? '' : 's'} to “${r.targetTitle}”` : 'No completed notes to archive'); await load(); }
+    else if (t.dataset.archivenote) { const r = await api('POST', `/note/${t.dataset.archivenote}/archive`); toast(r.noop ? 'Already archived' : `Archived → “${r.toTitle}”`); await load(); }
+    else if (t.dataset.unarchive)   { const r = await api('POST', `/note/${t.dataset.unarchive}/unarchive`); toast(`Unarchived → “${r.toTitle}”`); await load(); }
+    else if (t.dataset.unarchiveall){ if (await confirmDialog({ title: 'Unarchive all?', message: 'Move every note in this chapter back to General Notes and re-open them.', ok: 'Unarchive all' })) { const r = await api('POST', `/chapter/${t.dataset.unarchiveall}/unarchive-all`); toast(r.moved ? `Moved ${r.moved} note${r.moved === 1 ? '' : 's'} back to “${r.toTitle}”` : 'Nothing to unarchive'); await load(); } }
+    else if (t.dataset.rename)      { const title = await promptDialog({ title: 'Rename chapter', value: t.dataset.title, ok: 'Rename' }); if (!title || title === t.dataset.title) return; await api('PUT', '/chapter/' + t.dataset.rename, { title }); toast('Renamed'); load(); }
+    else if (t.dataset.delchap)     { if (await confirmDialog({ title: 'Delete chapter?', message: `“${t.dataset.title}” and ALL its notes will be permanently deleted.`, danger: true, ok: 'Delete' })) { await api('DELETE', '/chapter/' + t.dataset.delchap); selChapter = null; toast('Chapter deleted'); await load(); } }
+    else if (t.dataset.delgame)     {
+      const g = findGame(+t.dataset.delgame); const tot = g ? g.chapters.reduce((s, c) => s + c.noteCount, 0) : 0;
+      if (await confirmDialog({ title: 'Delete game?', message: `“${t.dataset.name}” and all its chapters/notes${tot ? ` (${tot} note${tot === 1 ? '' : 's'})` : ''} will be permanently deleted. This cannot be undone.`, danger: true, ok: 'Delete game' })) {
+        await api('DELETE', '/game/' + t.dataset.delgame); selChapter = null; toast('Game deleted'); await load();
+      }
+    }
+  } catch (err) { toast(err.message, true); }
+});
+// Enter-to-add in the add box
+document.addEventListener('keydown', (e) => {
+  if (e.target.id === 'addText' && e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault(); const btn = document.querySelector('[data-add]'); if (btn) btn.click();
+  }
+});
+$('#search').addEventListener('input', e => { filterText = e.target.value; renderTree(); });
+
+// Overlay controls
+$('#ovEnable').onclick  = async () => { try { const r = await api('POST', '/overlay', { action: STATE.enabled ? 'off' : 'on' }); STATE = r.state; renderTopbar(); } catch (e) { toast(e.message, true); } };
+$('#ovVisible').onclick = async () => { try { const r = await api('POST', '/overlay', { action: STATE.visible ? 'hide' : 'show' }); STATE = r.state; renderTopbar(); } catch (e) { toast(e.message, true); } };
+
+// ── Live sync via WebSocket (chat-driven changes appear instantly) ───────────
+let ws, reconnectT, reloadT;
+function scheduleReload() { clearTimeout(reloadT); reloadT = setTimeout(load, 250); }
+function connect() {
+  try { ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host); }
+  catch { return setStatus(false); }
+  ws.onopen = () => {
+    setStatus(true);
+    ws.send(JSON.stringify({ event: 'subscribe-to-service', service: 'notes' }));
+  };
+  ws.onmessage = (m) => {
+    let d; try { d = JSON.parse(m.data); } catch { return; }
+    const ev = d.event || d.type || '';
+    if (typeof ev === 'string' && ev.indexOf('note:') === 0) scheduleReload();
+  };
+  ws.onclose = () => { setStatus(false); clearTimeout(reconnectT); reconnectT = setTimeout(connect, 2500); };
+  ws.onerror = () => { try { ws.close(); } catch {} };
+}
+function setStatus(ok) {
+  $('#connDot').className = 'dot' + (ok ? ' live' : '');
+  $('#connTxt').textContent = ok ? 'live' : 'offline';
+}
+
+// Boot
+load();
+connect();
+setInterval(() => { if (!ws || ws.readyState !== 1) load(); }, 10000); // safety poll while disconnected
+</script>
+</body>
+</html>

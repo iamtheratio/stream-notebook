@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stream Notebook — Setup</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0; padding: 20px; color: #fff; min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #2a1a4e 50%, #1a1a2e 100%);
+    background-attachment: fixed;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  /* ── Topbar ── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    background: rgba(0,0,0,0.35); backdrop-filter: blur(15px);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+    padding: 12px 18px; margin-bottom: 14px;
+  }
+  .topbar-title { font-size: 1.15em; font-weight: 700; letter-spacing: .02em; text-shadow: 0 0 20px rgba(145,70,255,.5); }
+  .topbar-links { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tb-link {
+    color: #fff; text-decoration: none; padding: 6px 14px; font-size: 12px; border-radius: 20px;
+    background: rgba(145,70,255,.16); border: 1px solid rgba(145,70,255,.35); transition: all .2s;
+  }
+  .tb-link:hover { background: rgba(145,70,255,.32); transform: translateY(-1px); }
+
+  /* ── Status pills ── */
+  .pills { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .pill {
+    background: rgba(0,0,0,0.32); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.09); border-radius: 12px; padding: 12px 16px;
+  }
+  .pill-label { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: #8892b0; margin-bottom: 5px; }
+  .pill-value { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 7px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+  .dot.ok   { background: #00ff88; box-shadow: 0 0 9px rgba(0,255,136,.85); }
+  .dot.warn { background: #ffb84d; box-shadow: 0 0 9px rgba(255,184,77,.85); }
+  .dot.bad  { background: #ff5470; box-shadow: 0 0 9px rgba(255,84,112,.85); }
+
+  /* ── Cards ── */
+  .card {
+    background: rgba(0,0,0,0.32); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.09); border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 14px;
+  }
+  .card h2 {
+    margin: 0 0 4px; font-size: 12px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: #c39bff;
+  }
+  .card .hint { margin: 0 0 16px; font-size: 12.5px; color: #8892b0; line-height: 1.55; }
+
+  .row {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 11px 0; border-top: 1px solid rgba(255,255,255,.06);
+  }
+  .row:first-of-type { border-top: none; }
+  .row-text { flex: 1; min-width: 0; }
+  .row-title { font-size: 13.5px; font-weight: 600; }
+  .row-sub { font-size: 11.5px; color: #8892b0; margin-top: 3px; line-height: 1.45; }
+
+  /* ── Controls ── */
+  button {
+    font-family: inherit; cursor: pointer; border-radius: 20px; font-size: 12.5px;
+    padding: 7px 16px; transition: all .2s; white-space: nowrap;
+    background: rgba(145,70,255,.18); border: 1px solid rgba(145,70,255,.4); color: #fff;
+  }
+  button:hover:not(:disabled) { background: rgba(145,70,255,.35); transform: translateY(-1px); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.primary { background: rgba(145,70,255,.5); border-color: rgba(145,70,255,.8); font-weight: 600; }
+  button.ghost   { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.18); }
+  button.danger  { background: rgba(255,84,112,.16); border-color: rgba(255,84,112,.4); }
+  button.danger:hover:not(:disabled) { background: rgba(255,84,112,.3); }
+
+  input[type=text], input[type=number], select {
+    font-family: inherit; font-size: 12.5px; color: #fff; padding: 7px 12px; border-radius: 8px;
+    background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.15); outline: none;
+  }
+  input:focus, select:focus { border-color: rgba(145,70,255,.7); }
+  select option { background: #1a1a2e; }
+
+  /* Toggle switch */
+  .toggle { position: relative; width: 44px; height: 24px; flex: 0 0 auto; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0; cursor: pointer; border-radius: 24px;
+    background: rgba(255,255,255,.14); transition: .25s;
+  }
+  .slider:before {
+    content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px;
+    background: #fff; border-radius: 50%; transition: .25s;
+  }
+  .toggle input:checked + .slider { background: rgba(145,70,255,.85); }
+  .toggle input:checked + .slider:before { transform: translateX(20px); }
+
+  /* Segmented picker */
+  .seg { display: inline-flex; background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.13); border-radius: 20px; padding: 3px; }
+  .seg button { border: none; background: transparent; padding: 5px 15px; border-radius: 16px; color: #8892b0; }
+  .seg button.on { background: rgba(145,70,255,.5); color: #fff; font-weight: 600; }
+  .seg button:hover { transform: none; }
+
+  .url-box { display: flex; gap: 8px; align-items: center; }
+  .url-box input { flex: 1; font-family: 'Consolas', monospace; font-size: 12px; }
+
+  /* ── Log ── */
+  #log {
+    font-family: 'Consolas', monospace; font-size: 11.5px; line-height: 1.7;
+    max-height: 200px; overflow-y: auto; background: rgba(0,0,0,.4);
+    border-radius: 8px; padding: 12px 14px; color: #a8b2d1;
+  }
+  #log .error { color: #ff8fa3; }
+  #log .lvl { color: #5a6785; margin-right: 8px; }
+  .empty { color: #5a6785; font-style: italic; }
+
+  /* ── Modal (never a native dialog) ── */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,.72); backdrop-filter: blur(6px);
+    display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: linear-gradient(150deg, #221a3e, #16213e);
+    border: 1px solid rgba(145,70,255,.4); border-radius: 16px;
+    padding: 28px 32px; max-width: 470px; width: 100%; text-align: center;
+    box-shadow: 0 24px 70px rgba(0,0,0,.65);
+  }
+  .modal h3 { margin: 0 0 10px; font-size: 19px; }
+  .modal p  { color: #a8b2d1; font-size: 13.5px; line-height: 1.65; margin: 0 0 18px; }
+  .code {
+    font-family: 'Consolas', monospace; font-size: 34px; font-weight: 700; letter-spacing: .22em;
+    color: #c39bff; background: rgba(0,0,0,.45); border: 1px dashed rgba(145,70,255,.5);
+    border-radius: 12px; padding: 16px; margin: 0 0 18px; user-select: all;
+  }
+  .modal-actions { display: flex; gap: 10px; justify-content: center; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: rgba(145,70,255,.95); color: #fff; padding: 11px 24px; border-radius: 24px;
+    font-size: 13px; font-weight: 600; opacity: 0; transition: all .3s; z-index: 200;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5); pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.bad { background: rgba(255,84,112,.95); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="topbar">
+    <div class="topbar-title">📓 Stream Notebook</div>
+    <div class="topbar-links">
+      <a class="tb-link" href="/notes.html">Manage Notes</a>
+      <a class="tb-link" href="/overlay.html" target="_blank">Preview Overlay</a>
+    </div>
+  </div>
+
+  <!-- Live status -->
+  <div class="pills">
+    <div class="pill"><div class="pill-label">Twitch Account</div><div class="pill-value" id="p-twitch"><span class="dot bad"></span>Not connected</div></div>
+    <div class="pill"><div class="pill-label">Chat</div><div class="pill-value" id="p-chat"><span class="dot bad"></span>Idle</div></div>
+    <div class="pill"><div class="pill-label">Current Game</div><div class="pill-value" id="p-game"><span class="dot warn"></span>—</div></div>
+    <div class="pill"><div class="pill-label">Notes Database</div><div class="pill-value" id="p-db"><span class="dot warn"></span>Checking…</div></div>
+  </div>
+
+  <!-- Step 1 — Twitch -->
+  <div class="card">
+    <h2>Step 1 · Connect Twitch</h2>
+    <p class="hint">
+      Links your Twitch account so the notebook can read <code>!note</code> commands from your chat,
+      post confirmations back, and follow whatever game your channel is set to.
+      You approve it on Twitch — nothing to copy or paste here.
+    </p>
+    <div class="row">
+      <div class="row-text">
+        <div class="row-title" id="tw-title">Not connected</div>
+        <div class="row-sub" id="tw-sub">Click connect and approve the code on twitch.tv.</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="primary" id="btn-connect" onclick="connectTwitch()">Connect with Twitch</button>
+        <button class="danger" id="btn-disconnect" onclick="disconnectTwitch()" style="display:none">Disconnect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2 — OBS -->
+  <div class="card">
+    <h2>Step 2 · Add the overlay to OBS</h2>
+    <p class="hint">
+      In OBS: <b>Sources → + → Browser</b>. Paste this URL, set the size to
+      <b>1920 × 1080</b>, and tick <b>Shutdown source when not visible</b>.
+      The notebook stays hidden until a note is added or you run <code>!note show</code>.
+    </p>
+    <div class="url-box">
+      <input type="text" id="overlay-url" readonly value="http://localhost:8765/overlay.html">
+      <button class="primary" onclick="copyUrl()">Copy</button>
+    </div>
+  </div>
+
+  <!-- Step 3 — Settings -->
+  <div class="card">
+    <h2>Step 3 · Options</h2>
+    <p class="hint">Saved automatically. Changes apply immediately — no restart needed.</p>
+
+    <div class="row">
+      <div class="row-text">
+        <div class="row-title">Where chat comes from</div>
+        <div class="row-sub">
+          <b>Twitch</b> connects directly — nothing else to install.
+          <b>Streamer.bot</b> uses your existing setup and covers YouTube and TikTok too.
+        </div>
+      </div>
+      <div class="seg" id="seg-chat">
+        <button data-v="twitch" onclick="setChatSource('twitch')">Twitch</button>
+        <button data-v="streamerbot" onclick="setChatSource('streamerbot')">Streamer.bot</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-text">
+        <div class="row-title">Reply in chat</div>
+        <div class="row-sub">Posts short confirmations like “📓 Note #3 added.” Turn off for a quieter chat — the overlay still updates.</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="s-replies" onchange="save()"><span class="slider"></span></label>
+    </div>
+
+    <div class="row">
+      <div class="row-text">
+        <div class="row-title">Organise notes by game</div>
+        <div class="row-sub">
+          <b>Auto</b> follows your Twitch category, so each game keeps its own notebook.
+          <b>Manual</b> uses one fixed name for everything.
+        </div>
+      </div>
+      <div class="seg" id="seg-game">
+        <button data-v="twitch" onclick="setGameSource('twitch')">Auto</button>
+        <button data-v="manual" onclick="setGameSource('manual')">Manual</button>
+      </div>
+    </div>
+
+    <div class="row" id="row-manual-game" style="display:none">
+      <div class="row-text">
+        <div class="row-title">Notebook name</div>
+        <div class="row-sub">All notes are filed under this name.</div>
+      </div>
+      <input type="text" id="s-manual-game" onchange="save()" placeholder="Stream Notes">
+    </div>
+
+    <div class="row">
+      <div class="row-text">
+        <div class="row-title">VIPs can add notes</div>
+        <div class="row-sub">Moderators and you can always add. This lets VIPs add them too (they still can’t delete or clear).</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="s-vip" onchange="save()"><span class="slider"></span></label>
+    </div>
+
+    <div class="row">
+      <div class="row-text">
+        <div class="row-title">Viewer cooldown</div>
+        <div class="row-sub">Seconds a regular viewer must wait between <code>!note show</code> / <code>hide</code> / <code>list</code>. Stops overlay spam. 0 disables it.</div>
+      </div>
+      <input type="number" id="s-cooldown" min="0" max="300" style="width:80px" onchange="save()">
+    </div>
+  </div>
+
+  <!-- Overlay controls -->
+  <div class="card">
+    <h2>Overlay Controls</h2>
+    <p class="hint">Same as the chat commands, for when you’d rather click than type.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="overlay('show')">Show notebook</button>
+      <button onclick="overlay('hide')">Hide notebook</button>
+      <button class="ghost" onclick="overlay('on')">Notes ON</button>
+      <button class="ghost" onclick="overlay('off')">Notes OFF</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Activity</h2>
+    <div id="log"><span class="empty">Waiting for activity…</span></div>
+  </div>
+
+</div>
+
+<!-- Twitch device-code modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="m-title">Connect with Twitch</h3>
+    <p id="m-text">Go to the link below and enter this code to approve access.</p>
+    <div class="code" id="m-code">——————</div>
+    <div class="modal-actions">
+      <button class="primary" id="m-open" onclick="openActivate()">Open twitch.tv/activate</button>
+      <button class="ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+let S = null;              // last-known settings
+let activateUrl = 'https://www.twitch.tv/activate';
+let watchingApproval = false;
+
+/* ── Helpers ─────────────────────────────────────────────────────────── */
+
+function toast(msg, bad) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (bad ? ' bad' : '');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => { t.className = ''; }, 2600);
+}
+
+async function api(path, method, body) {
+  const r = await fetch(path, {
+    method: method || 'GET',
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return r.json();
+}
+
+function setPill(id, state, text) {
+  document.getElementById(id).innerHTML =
+    '<span class="dot ' + state + '"></span>' + text;
+}
+
+function setSeg(id, value) {
+  document.querySelectorAll('#' + id + ' button').forEach(b => {
+    b.classList.toggle('on', b.dataset.v === value);
+  });
+}
+
+/* ── Settings ────────────────────────────────────────────────────────── */
+
+async function loadSettings() {
+  const r = await api('/api/settings');
+  S = r.settings;
+
+  document.getElementById('s-replies').checked = S.chatReplies;
+  document.getElementById('s-vip').checked = S.vipCanAdd;
+  document.getElementById('s-cooldown').value = S.publicCooldownSec;
+  document.getElementById('s-manual-game').value = S.manualGame || '';
+  setSeg('seg-chat', S.chatSource);
+  setSeg('seg-game', S.gameSource);
+  document.getElementById('row-manual-game').style.display =
+    S.gameSource === 'manual' ? 'flex' : 'none';
+}
+
+async function save(patch) {
+  const body = Object.assign({
+    chatReplies: document.getElementById('s-replies').checked,
+    vipCanAdd: document.getElementById('s-vip').checked,
+    publicCooldownSec: Number(document.getElementById('s-cooldown').value) || 0,
+    manualGame: document.getElementById('s-manual-game').value.trim() || 'Stream Notes',
+    chatSource: S.chatSource,
+    gameSource: S.gameSource,
+  }, patch || {});
+
+  const r = await api('/api/settings', 'POST', body);
+  S = r.settings;
+  toast('Saved');
+  refresh();
+}
+
+function setChatSource(v) { S.chatSource = v; setSeg('seg-chat', v); save(); }
+
+function setGameSource(v) {
+  S.gameSource = v;
+  setSeg('seg-game', v);
+  document.getElementById('row-manual-game').style.display = v === 'manual' ? 'flex' : 'none';
+  save();
+}
+
+/* ── Twitch connect ──────────────────────────────────────────────────── */
+
+async function connectTwitch() {
+  const btn = document.getElementById('btn-connect');
+  btn.disabled = true;
+  btn.textContent = 'Starting…';
+
+  const r = await api('/api/twitch/connect', 'POST');
+
+  btn.disabled = false;
+  btn.textContent = 'Connect with Twitch';
+
+  if (!r.ok) { toast(r.error || 'Could not start Twitch sign-in', true); return; }
+
+  activateUrl = r.verificationUri;
+  document.getElementById('m-code').textContent = r.userCode;
+  document.getElementById('modal').classList.add('show');
+
+  // The server polls Twitch; we just watch for the account to appear.
+  watchingApproval = true;
+}
+
+function openActivate() { window.open(activateUrl, '_blank'); }
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+  watchingApproval = false;
+}
+
+async function disconnectTwitch() {
+  await api('/api/twitch/disconnect', 'POST');
+  toast('Twitch disconnected');
+  refresh();
+}
+
+/* ── Overlay controls ────────────────────────────────────────────────── */
+
+async function overlay(action) {
+  const r = await api('/api/notes/overlay', 'POST', { action });
+  toast(r.ok ? 'Overlay: ' + action : 'Failed', !r.ok);
+}
+
+function copyUrl() {
+  const el = document.getElementById('overlay-url');
+  navigator.clipboard.writeText(el.value)
+    .then(() => toast('Overlay URL copied — paste it into OBS'))
+    .catch(() => { el.select(); toast('Press Ctrl+C to copy'); });
+}
+
+/* ── Live status ─────────────────────────────────────────────────────── */
+
+async function refresh() {
+  let st;
+  try { st = await api('/api/status'); } catch (_) {
+    setPill('p-chat', 'bad', 'Server offline');
+    return;
+  }
+
+  // Twitch
+  const tw = st.twitch;
+  if (!tw.configured) {
+    setPill('p-twitch', 'bad', 'Not set up');
+    document.getElementById('tw-title').textContent = 'This copy needs a Twitch Client ID';
+    document.getElementById('tw-sub').textContent = 'See the README — the person who shared this needs to add one in lib/TwitchAuth.js.';
+    document.getElementById('btn-connect').disabled = true;
+  } else if (tw.connected) {
+    setPill('p-twitch', 'ok', tw.login);
+    document.getElementById('tw-title').textContent = 'Connected as ' + tw.login;
+    document.getElementById('tw-sub').textContent = 'Reading chat and following your stream category.';
+    document.getElementById('btn-connect').style.display = 'none';
+    document.getElementById('btn-disconnect').style.display = '';
+
+    if (watchingApproval) { closeModal(); toast('Connected as ' + tw.login); }
+  } else {
+    setPill('p-twitch', 'bad', 'Not connected');
+    document.getElementById('tw-title').textContent = 'Not connected';
+    document.getElementById('tw-sub').textContent = 'Click connect and approve the code on twitch.tv.';
+    document.getElementById('btn-connect').style.display = '';
+    document.getElementById('btn-disconnect').style.display = 'none';
+  }
+
+  // Chat
+  const c = st.chat || {};
+  const chatDot = c.state === 'connected' || c.state === 'listening' ? 'ok'
+                : c.state === 'error' ? 'bad' : 'warn';
+  setPill('p-chat', chatDot, c.detail || 'Idle');
+
+  setPill('p-game', st.game ? 'ok' : 'warn', st.game || 'Not detected yet');
+  setPill('p-db', st.persists ? 'ok' : 'bad', st.persists ? 'Saving notes' : 'Not saving');
+
+  if (st.overlayUrl) document.getElementById('overlay-url').value = st.overlayUrl;
+
+  // Activity log
+  const log = document.getElementById('log');
+  if (st.logs && st.logs.length) {
+    log.innerHTML = st.logs.slice(-40).reverse().map(l =>
+      '<div class="' + (l.level === 'error' ? 'error' : '') + '">' +
+      '<span class="lvl">' + l.at.substring(11, 19) + '</span>' +
+      l.message.replace(/[<>]/g, '') + '</div>'
+    ).join('');
+  }
+}
+
+loadSettings().then(refresh);
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>

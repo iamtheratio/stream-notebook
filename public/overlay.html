@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stream Notebook — Overlay</title>
+<style>
+  /* OBS browser sources are transparent by default; keep it that way. */
+  html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+</style>
+</head>
+<body>
+
+<!-- The notebook module renders itself into the page and manages its own DOM,
+     styles and visibility. This page only has to keep a socket alive for it. -->
+<script src="notebook-overlay.js"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  const WS_URL = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
+  let ws = null;
+  let retry = 0;
+
+  function connect() {
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+      retry = 0;
+      // Subscribes to the notes service and asks for current state, so the
+      // notebook paints correctly the instant OBS loads or refreshes the source.
+      window.NotesOverlay.attach(ws);
+    };
+
+    ws.onmessage = (evt) => {
+      let msg;
+      try { msg = JSON.parse(evt.data); } catch (_) { return; }
+      if (msg.event && msg.event.indexOf('note:') === 0) {
+        window.NotesOverlay.handle(msg.event, msg.data);
+      }
+    };
+
+    // Backoff on reconnect so a server restart doesn't hammer the socket, but
+    // stay quick early — a browser-source refresh should feel instant.
+    ws.onclose = () => {
+      const delay = Math.min(10000, 500 * Math.pow(2, retry++));
+      setTimeout(connect, delay);
+    };
+
+    ws.onerror = () => { try { ws.close(); } catch (_) {} };
+  }
+
+  connect();
+})();
+</script>
+
+</body>
+</html>

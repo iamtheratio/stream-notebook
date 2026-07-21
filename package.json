@@ -1,0 +1,19 @@
+{
+  "name": "stream-notebook",
+  "version": "1.0.0",
+  "description": "A game-aware on-stream notebook overlay driven by chat commands. Works with Twitch directly, or with Streamer.bot.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "express": "^4.21.0",
+    "ws": "^8.18.0"
+  },
+  "keywords": ["twitch", "obs", "overlay", "stream", "notes", "streamerbot"],
+  "license": "MIT"
+}
