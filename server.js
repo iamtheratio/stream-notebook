@@ -182,6 +182,12 @@ class StreamNotebookServer {
             const cat = await auth.getCurrentCategory();
             if (cat && cat !== this.currentCategory) {
                 this.currentCategory = cat;
+                // Still tracked while pinned, so unpinning lands on the right game —
+                // just don't move the notebook out from under a deliberate pin.
+                if (this.notes.pinnedGameId != null) {
+                    this._log('info', `🎮 Category changed → ${cat} (notebook stays pinned)`);
+                    return;
+                }
                 this._log('info', `🎮 Category changed → ${cat}`);
                 this.notes.handleEvent({ event: 'game-changed', data: {} });
             }
@@ -241,6 +247,8 @@ class StreamNotebookServer {
         this.app.delete('/api/notes/chapter/:id', (req, res) => withNotes(res, s => s.mgmtDeleteChapter(+req.params.id)));
         this.app.delete('/api/notes/game/:id', (req, res) => withNotes(res, s => s.mgmtDeleteGame(+req.params.id)));
         this.app.post('/api/notes/chapter/:id/switch', (req, res) => withNotes(res, s => s.mgmtSwitchChapter(+req.params.id)));
+        this.app.post('/api/notes/game/:id/pin', (req, res) => withNotes(res, s => ({ state: s.mgmtPinGame(+req.params.id) })));
+        this.app.post('/api/notes/unpin', (req, res) => withNotes(res, s => ({ state: s.mgmtUnpinGame() })));
         this.app.post('/api/notes/chapter/:id/archive-done', (req, res) => withNotes(res, s => s.mgmtArchiveDone(+req.params.id)));
         this.app.post('/api/notes/note/:id/archive', (req, res) => withNotes(res, s => s.mgmtArchiveNote(+req.params.id)));
         this.app.post('/api/notes/note/:id/unarchive', (req, res) => withNotes(res, s => s.mgmtUnarchiveNote(+req.params.id)));

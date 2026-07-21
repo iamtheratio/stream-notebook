@@ -73,6 +73,13 @@
   .addchap-btn { margin-left:6px; width:21px; height:21px; min-width:21px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:15px; line-height:1; color:#8aa; background:rgba(255,255,255,.06); cursor:pointer; opacity:0; transition:all .15s; }
   .game-hd:hover .addchap-btn { opacity:.8; }
   .addchap-btn:hover { background:rgba(0,255,136,.18); color:var(--green); opacity:1; }
+  .pinnote { color:#c39bff; font-weight:normal; font-size:11px; }
+  .pinnote a { color:#c39bff; text-decoration:underline; }
+  /* Pin: shown on hover for other games, always shown (lit) for the pinned one. */
+  .pin-btn { margin-left:3px; width:21px; height:21px; min-width:21px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; line-height:1; color:#8aa; background:rgba(255,255,255,.06); cursor:pointer; opacity:0; transition:all .15s; }
+  .game-hd:hover .pin-btn { opacity:.7; }
+  .pin-btn:hover { background:rgba(145,70,255,.25); color:#c39bff; opacity:1; }
+  .pin-btn.on { opacity:1; background:rgba(145,70,255,.3); color:#c39bff; }
   .delgame-btn { margin-left:3px; width:21px; height:21px; min-width:21px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; line-height:1; color:#8aa; background:rgba(255,255,255,.06); cursor:pointer; opacity:0; transition:all .15s; }
   .game-hd:hover .delgame-btn { opacity:.7; }
   .delgame-btn:hover { background:rgba(255,70,70,.2); color:#ff9b9b; opacity:1; }
@@ -274,11 +281,21 @@ async function load() {
 
 function render() { renderTopbar(); renderTree(); renderMain(); }
 
+async function doUnpin(e) {
+  e.preventDefault();
+  try { await api('POST', '/unpin'); toast('Unpinned — following your game again'); await load(); }
+  catch (err) { toast(err.message, true); }
+}
+
 function renderTopbar() {
   const lb = $('#liveBadge');
   if (STATE.game) {
     const ch = findChapter(STATE.currentChapterId);
-    lb.innerHTML = `<span class="dot live"></span>LIVE: <b>${esc(STATE.game)}</b>${ch ? ' › ' + esc(ch.chapter.title) : ''}`;
+    // Say so when pinned — otherwise "why isn't it following my game?" looks like a bug.
+    const pinned = STATE.pinnedGameId != null;
+    lb.innerHTML = `<span class="dot live"></span>${pinned ? 'PINNED' : 'LIVE'}: <b>${esc(STATE.game)}</b>`
+      + `${ch ? ' › ' + esc(ch.chapter.title) : ''}`
+      + `${pinned ? ' <span class="pinnote">— not following your game. <a href="#" onclick="doUnpin(event)">Unpin</a></span>' : ''}`;
   } else lb.innerHTML = `<span class="dot"></span>No live game yet`;
   const en = $('#ovEnable'); en.textContent = STATE.enabled ? '🔔 Notes ON' : '🔕 Notes OFF';
   en.className = 'tb-btn ' + (STATE.enabled ? 'on' : 'off');
@@ -297,13 +314,17 @@ function renderTree() {
     if (f && !gMatch && !chaps.length) continue;
     shown++;
     const isLiveGame = g.id === STATE.gameId;
+    const isPinned = g.id === STATE.pinnedGameId;
     const col = collapsed[g.id] && !f;
     const el = document.createElement('div');
     el.className = 'game' + (col ? ' collapsed' : '');
     el.innerHTML =
       `<div class="game-hd${isLiveGame ? ' livegame' : ''}" data-g="${g.id}">
-        <span class="caret">▼</span>${isLiveGame ? '🎮 ' : ''}${esc(g.name)}
+        <span class="caret">▼</span>${isPinned ? '📌 ' : isLiveGame ? '🎮 ' : ''}${esc(g.name)}
         <span class="gtype">${esc(g.type || '')}</span>
+        ${isLiveGame
+          ? (isPinned ? `<span class="pin-btn on" data-unpin="1" title="Stop pinning — follow the game again">📌</span>` : '')
+          : `<span class="pin-btn" data-pin="${g.id}" data-name="${esc(g.name)}" title="Show this game on stream">📌</span>`}
         <span class="addchap-btn" data-addchap="${g.id}" title="New chapter in ${esc(g.name)}">＋</span>
         ${isLiveGame ? '' : `<span class="delgame-btn" data-delgame="${g.id}" data-name="${esc(g.name)}" title="Delete this game + all its notes">🗑</span>`}
       </div>
@@ -334,7 +355,7 @@ function renderMain() {
       <div class="crumb"><span class="g">${esc(game.name)}</span><span class="sep">›</span>${esc(chapter.title)}
         ${isLiveChap ? '<span class="livepin" style="color:var(--green);font-size:12px"> ● on stream</span>' : ''}</div>
       <div class="main-actions">
-        ${isLiveGame && !isLiveChap ? `<button class="btn primary" data-switch="${chapter.id}">📌 Make active on stream</button>` : ''}
+        ${!isLiveChap ? `<button class="btn primary" data-switch="${chapter.id}">📌 ${isLiveGame ? 'Make active on stream' : 'Show this on stream'}</button>` : ''}
         ${doneCount && !isCompletedChap ? `<button class="btn" data-archive="${chapter.id}" title="Move ${doneCount} completed note${doneCount === 1 ? '' : 's'} to “Completed Notes”">🧹 Archive done (${doneCount})</button>` : ''}
         ${isCompletedChap && chapter.notes.length ? `<button class="btn" data-unarchiveall="${chapter.id}" title="Move all ${chapter.notes.length} note${chapter.notes.length === 1 ? '' : 's'} back to General Notes (re-opened)">↩ Unarchive all (${chapter.notes.length})</button>` : ''}
         <button class="btn" data-rename="${chapter.id}" data-title="${esc(chapter.title)}">✏️ Rename</button>
@@ -389,7 +410,7 @@ function beginEdit(id) {
 
 // ── Event delegation ────────────────────────────────────────────────────────
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-g],[data-c],[data-addchap],[data-add],[data-toggle],[data-del],[data-edit],[data-switch],[data-rename],[data-delchap],[data-delgame],[data-archive],[data-archivenote],[data-unarchive],[data-unarchiveall]');
+  const t = e.target.closest('[data-g],[data-c],[data-addchap],[data-add],[data-toggle],[data-del],[data-edit],[data-switch],[data-rename],[data-delchap],[data-delgame],[data-archive],[data-archivenote],[data-unarchive],[data-unarchiveall],[data-pin],[data-unpin]');
   if (!t) return;
   try {
     if (t.dataset.g != null)        { const id = +t.dataset.g; collapsed[id] = !collapsed[id]; renderTree(); }
@@ -412,7 +433,9 @@ document.addEventListener('click', async (e) => {
     }
     else if (t.dataset.del)         { if (await confirmDialog({ title: 'Delete note?', message: 'This permanently removes the note.', danger: true, ok: 'Delete' })) { await api('DELETE', '/note/' + t.dataset.del); toast('Note deleted'); load(); } }
     else if (t.dataset.edit)        { beginEdit(+t.dataset.edit); }
-    else if (t.dataset.switch)      { const r = await api('POST', `/chapter/${t.dataset.switch}/switch`); toast(r.switched ? 'Now active on stream' : 'Only the live game can be shown'); load(); }
+    else if (t.dataset.switch)      { const r = await api('POST', `/chapter/${t.dataset.switch}/switch`); toast(r.pinned ? 'Pinned on stream — the notebook will stay here' : 'Now active on stream'); await load(); }
+    else if (t.dataset.pin)         { await api('POST', `/game/${t.dataset.pin}/pin`); selChapter = null; toast(`“${t.dataset.name}” pinned on stream`); await load(); }
+    else if (t.dataset.unpin)       { await api('POST', '/unpin'); toast('Unpinned — following your game again'); await load(); }
     else if (t.dataset.archive)     { const r = await api('POST', `/chapter/${t.dataset.archive}/archive-done`); toast(r.moved ? `Moved ${r.moved} completed note${r.moved === 1 ? '' : 's'} to “${r.targetTitle}”` : 'No completed notes to archive'); await load(); }
     else if (t.dataset.archivenote) { const r = await api('POST', `/note/${t.dataset.archivenote}/archive`); toast(r.noop ? 'Already archived' : `Archived → “${r.toTitle}”`); await load(); }
     else if (t.dataset.unarchive)   { const r = await api('POST', `/note/${t.dataset.unarchive}/unarchive`); toast(`Unarchived → “${r.toTitle}”`); await load(); }
