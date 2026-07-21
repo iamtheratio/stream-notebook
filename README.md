@@ -12,9 +12,7 @@ Runs on your own PC. Nothing to sign up for, no monthly anything.
 ![commands](https://img.shields.io/badge/chat-!note-9146FF) ![obs](https://img.shields.io/badge/OBS-browser%20source-000) ![node](https://img.shields.io/badge/node-18%2B-3c873a)
 
 <!-- SCREENSHOT: the notebook overlaid on real gameplay. See docs/README-images.md -->
-<!-- TODO screenshot (see docs/README-images.md) — uncomment when added:
 ![The notebook on stream](docs/img/overlay-on-stream.png)
--->
 
 ---
 
@@ -56,9 +54,7 @@ spot. **Don't run it from inside the ZIP**, Windows won't let it work properly.
 Open the folder and **double-click `start.bat`**.
 
 <!-- SCREENSHOT: the unzipped folder in Explorer, start.bat highlighted -->
-<!-- TODO screenshot (see docs/README-images.md) — uncomment when added:
 ![The folder, with start.bat highlighted](docs/img/01-start-bat.png)
--->
 
 A black window opens with white text. **That's normal — that's the notebook
 running.** Leave it open the whole time you stream; closing it turns the notebook
