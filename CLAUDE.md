@@ -5,17 +5,22 @@
 Built, tested end to end, and pushed to
 **https://github.com/iamtheratio/stream-notebook** (public, one commit).
 
-**Blocker before anyone can use it:** `CLIENT_ID` in `lib/TwitchAuth.js` is still
-the placeholder. Register a Twitch app (dev.twitch.tv/console/apps → redirect URL
-`http://localhost`, category Chat Bot, client type **Public**), paste the ID in,
-commit and push. It is not a secret — public clients are meant to ship it.
+`CLIENT_ID` in `lib/TwitchAuth.js` is filled in and verified — Twitch issued a
+device code for it on 2026-07-21, so the device-flow *start* is confirmed against
+live Twitch. It is not a secret; public clients are meant to ship it.
 
-Then: run `start.bat`, walk the real Connect-with-Twitch flow (never exercised
-against live Twitch yet), and confirm the overlay renders in an OBS browser
-source at 1920x1080. After that it's ready to hand to l337.
+Still untested end to end: approving the code on twitch.tv/activate and the
+token-poll/refresh path that follows, chat connecting over IRC, and the overlay
+rendering in an OBS browser source at 1920x1080. Run `start.bat` and walk those.
+After that it's ready to hand to l337.
 
-Known loose end: `public/notes.html` silently swallows API errors — deleting the
-live game returns a clear 400 that the page never shows. Same flaw upstream.
+An earlier note here claimed `public/notes.html` silently swallows API errors on
+deleting the live game. That was wrong and is retracted: the server returns
+`400 {ok:false,error}` (`server.js:142`), `api()` throws on it
+(`notes.html:222`), and the click handler toasts it (`notes.html:428`) — and the
+trash-can button isn't even rendered for the live game (`notes.html:308`), so the
+path is unreachable from the UI. Minor real gap, if you want it: nothing explains
+*why* the live game has no delete button.
 
 ## What this is
 
