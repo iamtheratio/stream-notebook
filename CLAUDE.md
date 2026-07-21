@@ -1,5 +1,22 @@
 # Stream Notebook — project notes for Claude
 
+## Where we left off (2026-07-21)
+
+Built, tested end to end, and pushed to
+**https://github.com/iamtheratio/stream-notebook** (public, one commit).
+
+**Blocker before anyone can use it:** `CLIENT_ID` in `lib/TwitchAuth.js` is still
+the placeholder. Register a Twitch app (dev.twitch.tv/console/apps → redirect URL
+`http://localhost`, category Chat Bot, client type **Public**), paste the ID in,
+commit and push. It is not a secret — public clients are meant to ship it.
+
+Then: run `start.bat`, walk the real Connect-with-Twitch flow (never exercised
+against live Twitch yet), and confirm the overlay renders in an OBS browser
+source at 1920x1080. After that it's ready to hand to l337.
+
+Known loose end: `public/notes.html` silently swallows API errors — deleting the
+live game returns a clear 400 that the page never shows. Same flaw upstream.
+
 ## What this is
 
 A standalone, shareable extraction of the `notes` service from the user's larger
