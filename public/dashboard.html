@@ -278,6 +278,33 @@
 
     <div class="row">
       <div class="row-text">
+        <div class="row-title">Where the notebook sits</div>
+        <div class="row-sub">Which corner of your stream it appears in. Changes show up straight away — no need to touch OBS.</div>
+      </div>
+      <select id="s-corner" onchange="save()">
+        <option value="bottom-left">Bottom left</option>
+        <option value="bottom-right">Bottom right</option>
+        <option value="top-left">Top left</option>
+        <option value="top-right">Top right</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <div class="row-text">
+        <div class="row-title">Notebook size</div>
+        <div class="row-sub">Bigger is easier to read on a large or vertical (phone-shaped) stream. The text stays sharp at every size.</div>
+      </div>
+      <select id="s-scale" onchange="save()">
+        <option value="0.75">Small</option>
+        <option value="1">Normal</option>
+        <option value="1.25">Large</option>
+        <option value="1.5">Extra large</option>
+        <option value="2">Huge (vertical streams)</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <div class="row-text">
         <div class="row-title">Viewer cooldown</div>
         <div class="row-sub">Seconds a regular viewer must wait between <code>!note show</code> / <code>hide</code> / <code>list</code>. Stops people spamming the overlay on and off. 0 turns the wait off.</div>
       </div>
@@ -401,6 +428,8 @@ async function loadSettings() {
   document.getElementById('s-vip').checked = S.vipCanAdd;
   document.getElementById('s-subs').checked = S.subsCanAdd;
   document.getElementById('s-cooldown').value = S.publicCooldownSec;
+  document.getElementById('s-corner').value = S.overlayCorner || 'bottom-left';
+  document.getElementById('s-scale').value = String(S.overlayScale || 1);
   document.getElementById('s-manual-game').value = S.manualGame || '';
   setSeg('seg-game', S.gameSource);
   loadAutostart();
@@ -415,6 +444,8 @@ async function save(patch) {
     vipCanAdd: document.getElementById('s-vip').checked,
     subsCanAdd: document.getElementById('s-subs').checked,
     publicCooldownSec: Number(document.getElementById('s-cooldown').value) || 0,
+    overlayCorner: document.getElementById('s-corner').value,
+    overlayScale: Number(document.getElementById('s-scale').value) || 1,
     manualGame: document.getElementById('s-manual-game').value.trim() || 'Stream Notes',
     gameSource: S.gameSource,
   }, patch || {});

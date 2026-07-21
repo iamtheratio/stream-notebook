@@ -22,6 +22,43 @@
   let ws = null;
   let retry = 0;
 
+  // ── Size and position ────────────────────────────────────────────────────
+  // Applied as an override on top of the notebook module, never inside it:
+  // notebook-overlay.js is shared verbatim with the upstream project.
+  //
+  // `zoom` rather than `transform: scale` on purpose. The module warns that a
+  // transform promotes it to a composited layer, which makes CEF bilinear-sample
+  // the emote images and blur the text. `zoom` re-lays-out and rasterizes at the
+  // new size, so it stays crisp at any scale.
+  const CORNERS = {
+    'bottom-left':  'left:26px; right:auto; bottom:76px; top:auto;',
+    'bottom-right': 'left:auto; right:26px; bottom:76px; top:auto;',
+    'top-left':     'left:26px; right:auto; top:26px; bottom:auto;',
+    'top-right':    'left:auto; right:26px; top:26px; bottom:auto;',
+  };
+
+  function applyLayout(s) {
+    const scale = Number(s && s.overlayScale) || 1;
+    const corner = CORNERS[s && s.overlayCorner] ? s.overlayCorner : 'bottom-left';
+
+    let el = document.getElementById('nbk-layout');
+    if (!el) {
+      el = document.createElement('style');
+      el.id = 'nbk-layout';
+      document.head.appendChild(el);
+    }
+    el.textContent = '#nbk-stage {' + CORNERS[corner] + 'zoom:' + scale + ';}';
+  }
+
+  // Fetched over HTTP rather than pushed, so the overlay lays out correctly the
+  // moment OBS loads it — before any WebSocket traffic arrives.
+  function loadLayout() {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(r => { if (r && r.ok) applyLayout(r.settings); })
+      .catch(() => { /* defaults are already correct */ });
+  }
+
   function connect() {
     ws = new WebSocket(WS_URL);
 
@@ -35,6 +72,9 @@
     ws.onmessage = (evt) => {
       let msg;
       try { msg = JSON.parse(evt.data); } catch (_) { return; }
+      // Sent when the dashboard saves, so size/position change live in OBS
+      // instead of needing the browser source refreshed.
+      if (msg.event === 'notebook:layout') { applyLayout(msg.data); return; }
       if (msg.event && msg.event.indexOf('note:') === 0) {
         window.NotesOverlay.handle(msg.event, msg.data);
       }
@@ -50,6 +90,7 @@
     ws.onerror = () => { try { ws.close(); } catch (_) {} };
   }
 
+  loadLayout();
   connect();
 })();
 </script>

@@ -223,6 +223,16 @@ class StreamNotebookServer {
         if (this.chat) this.chat.say(message);
     }
 
+    /** Tell any open overlay to re-apply its size/position. */
+    _pushLayout() {
+        const s = settings.get();
+        const payload = JSON.stringify({
+            event: 'notebook:layout',
+            data: { overlayScale: s.overlayScale, overlayCorner: s.overlayCorner },
+        });
+        this.wss.clients.forEach(c => { if (c.readyState === 1) { try { c.send(payload); } catch (_) {} } });
+    }
+
     // ─── HTTP ───────────────────────────────────────────────────────────────
 
     _routes() {
@@ -293,6 +303,7 @@ class StreamNotebookServer {
         this.app.post('/api/settings', (req, res) => {
             settings.update(req.body || {});
             this._applySources();
+            this._pushLayout();   // overlay resizes live, no OBS refresh needed
             res.json({ ok: true, settings: settings.publicView() });
         });
 

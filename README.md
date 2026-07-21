@@ -12,7 +12,9 @@ Runs on your own PC. Nothing to sign up for, no monthly anything.
 ![commands](https://img.shields.io/badge/chat-!note-9146FF) ![obs](https://img.shields.io/badge/OBS-browser%20source-000) ![node](https://img.shields.io/badge/node-18%2B-3c873a)
 
 <!-- SCREENSHOT: the notebook overlaid on real gameplay. See docs/README-images.md -->
+<!-- TODO screenshot (see docs/README-images.md) — uncomment when added:
 ![The notebook on stream](docs/img/overlay-on-stream.png)
+-->
 
 ---
 
@@ -54,7 +56,9 @@ spot. **Don't run it from inside the ZIP**, Windows won't let it work properly.
 Open the folder and **double-click `start.bat`**.
 
 <!-- SCREENSHOT: the unzipped folder in Explorer, start.bat highlighted -->
+<!-- TODO screenshot (see docs/README-images.md) — uncomment when added:
 ![The folder, with start.bat highlighted](docs/img/01-start-bat.png)
+-->
 
 A black window opens with white text. **That's normal — that's the notebook
 running.** Leave it open the whole time you stream; closing it turns the notebook
@@ -78,7 +82,9 @@ You'll get a **6-character code**. Click the link next to it, sign in to Twitch 
 it asks, type the code in, and approve.
 
 <!-- SCREENSHOT: dashboard showing the 6-character device code -->
+<!-- TODO screenshot (see docs/README-images.md) — uncomment when added:
 ![The dashboard showing your code](docs/img/02-connect-twitch.png)
+-->
 
 Go back to the dashboard — it turns **green** on its own within a few seconds. You
 don't need to refresh or click anything else.
@@ -106,8 +112,14 @@ A settings window opens. Fill it in like this:
 | **Shutdown source when not visible** | ✅ tick this |
 | **Refresh browser when scene becomes active** | ✅ tick this |
 
+<sub>Streaming **vertically** (TikTok, Shorts, phone-shaped)? Use your canvas size
+— e.g. `1080` × `1920` — instead. Then set **Notebook size** to *Huge* in the
+dashboard, or it'll look tiny.</sub>
+
 <!-- SCREENSHOT: OBS browser source dialog, fields filled in, tickboxes ticked -->
+<!-- TODO screenshot (see docs/README-images.md) — uncomment when added:
 ![The OBS browser source window, filled in](docs/img/03-obs-browser-source.png)
+-->
 
 Click **OK**. Don't worry that nothing appears yet — **the notebook is invisible
 until there's a note to show.** That's on purpose, so it isn't sitting on your
@@ -128,7 +140,9 @@ The notebook should slide into the **bottom-left** of your OBS preview within a
 second, show your note, then tuck away again after about 20 seconds.
 
 <!-- SCREENSHOT: the notebook visible in OBS preview with one note -->
+<!-- TODO screenshot (see docs/README-images.md) — uncomment when added:
 ![Your first note](docs/img/04-first-note.png)
+-->
 
 **Seeing it? You're completely set up.** Drag the source around in OBS if you want
 it somewhere other than the bottom-left.
@@ -212,6 +226,14 @@ Useful for prepping a run in advance, or cleaning up after a long stream.
 ---
 
 ## Options explained
+
+**Where the notebook sits** — which corner of your stream it appears in. Changes
+apply live; you don't need to touch OBS.
+
+**Notebook size** — Small through Huge. Worth turning up on a 1440p/4K canvas,
+where the default looks small, and on **vertical (phone-shaped) streams**, where
+Huge is usually about right. The text is re-drawn at each size rather than
+stretched, so it stays sharp.
 
 **Start automatically when I turn on my PC** — the notebook starts by itself and
 waits, minimised, in your taskbar. Worth turning on, so you can't forget to start

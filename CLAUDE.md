@@ -156,6 +156,38 @@ reports the port it actually bound. Consequences worth remembering:
   nothing. It probes `/api/status` and, if that's us, opens the existing dashboard
   and exits 0.
 
+## Game pin
+
+`pinnedGameId` (in the **state file**, not settings — that keeps the change
+identical in both repos instead of straddling the `Settings.get()` vs `config.json`
+seam). Enforced in **`resolveGameName()`**, deliberately: that's the single choke
+point every caller goes through, so the poll, chat commands and session start all
+respect the pin without needing their own guards.
+
+Without a pin, "show this game on stream" is impossible — the category poll would
+silently drag the notebook back within 60s. `mgmtSwitchChapter` therefore auto-pins
+when the target chapter belongs to another game, rather than refusing as it used to.
+
+The notes manager shows `PINNED` vs `LIVE` with an inline Unpin. That label is
+load-bearing: a pinned notebook that ignores your Twitch category looks like a bug
+unless the UI says otherwise.
+
+## Overlay size and position
+
+`overlayScale` + `overlayCorner`, applied by **`overlay.html`**, never by
+`notebook-overlay.js` — that file is byte-identical to upstream and must stay so.
+The module renders at a fixed 400x570 bottom-left, which is small on 1440p and
+badly placed on a vertical canvas.
+
+Scaling uses **`zoom`, not `transform: scale`**. The module's own comment explains
+why: a transform promotes it to a composited layer and CEF then bilinear-samples
+the emote images and blurs the text. `zoom` re-lays-out and rasterizes at the new
+size, staying crisp.
+
+Settings changes broadcast `notebook:layout` over the WebSocket (`_pushLayout`), so
+OBS updates live. `overlay.html` also fetches `/api/settings` on load, so it lays
+out correctly before any socket traffic arrives.
+
 ## Starting and stopping
 
 There is no tray app — considered and rejected 2026-07-21. A C# tray launcher would
