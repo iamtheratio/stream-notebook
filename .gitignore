@@ -4,6 +4,9 @@ node_modules/
 # Never commit it — settings.json holds a Twitch access token.
 data/
 
+# Editor-local; the audience for this repo does not use VS Code.
+.vscode/
+
 npm-debug.log*
 .DS_Store
 Thumbs.db

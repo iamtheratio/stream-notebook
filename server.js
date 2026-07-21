@@ -5,25 +5,44 @@
  *
  * Boots three things and wires them together:
  *   1. NotesService  — the notebook itself (SQLite, chat commands, overlay state)
- *   2. A chat adapter — Twitch IRC directly, or Streamer.bot feeding us events
+ *   2. A chat adapter — Twitch IRC, connected directly with no bot software
  *   3. A web server  — setup dashboard, notes manager, and the OBS overlay page
  *
- * There is no config file. Everything is set from the dashboard at
- * http://localhost:8765 and stored in data/settings.json.
+ * There is no config file. Everything is set from the dashboard (port 8765 by
+ * default) and stored in data/settings.json.
  */
 
 const express = require('express');
+const fs = require('fs');
 const http = require('http');
 const path = require('path');
+const { spawn } = require('child_process');
 const { WebSocketServer } = require('ws');
 
 const settings = require('./lib/Settings');
 const auth = require('./lib/TwitchAuth');
+const autostart = require('./lib/Autostart');
 const NotesService = require('./lib/NotesService');
 const TwitchChat = require('./lib/adapters/TwitchChat');
-const { sendViaStreamerbot } = require('./lib/adapters/StreamerbotReply');
 
-const PORT = Number(process.env.PORT) || settings.get().port || 8765;
+// A developer setting PORT explicitly wants that port and no browser popped at
+// them; anyone else gets 8765 and whatever it takes to actually come up.
+const PORT_FROM_ENV = !!process.env.PORT;
+const PREFERRED_PORT = Number(process.env.PORT) || settings.get().port || 8765;
+const PORT_ATTEMPTS = 10;
+
+/** Open a URL in the default browser. Never throws — the URL is printed anyway. */
+function openUrl(url) {
+    try {
+        if (process.platform === 'win32') {
+            spawn('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' }).unref();
+        } else if (process.platform === 'darwin') {
+            spawn('open', [url], { detached: true, stdio: 'ignore' }).unref();
+        } else {
+            spawn('xdg-open', [url], { detached: true, stdio: 'ignore' }).unref();
+        }
+    } catch (_) { /* nothing worth failing a boot over */ }
+}
 
 class StreamNotebookServer {
     constructor() {
@@ -31,16 +50,25 @@ class StreamNotebookServer {
         this.server = http.createServer(this.app);
         this.wss = new WebSocketServer({ server: this.server });
 
+        // ws forwards the http server's errors onto itself, and an unhandled
+        // 'error' on an EventEmitter kills the process — which would defeat the
+        // port walk in _listen() before it ever retried.
+        this.wss.on('error', err => {
+            if (err.code === 'EADDRINUSE') return;   // _listen owns this one
+            this._log('error', `WebSocket server error: ${err.message}`);
+        });
+
         this.logs = [];              // rolling buffer shown in the dashboard
         this.chat = null;            // active TwitchChat instance, if any
         this.chatStatus = { source: null, state: 'idle', detail: 'Not started' };
+        this.port = PREFERRED_PORT;  // real bound port, set once listen succeeds
         this.currentCategory = null; // last category seen on the Twitch channel
         this.categoryTimer = null;
 
         this.notes = new NotesService(this.wss, {
             settings,
             gameResolver: () => this._resolveGame(),
-            replyTransport: (msg, platform) => this._reply(msg, platform),
+            replyTransport: msg => this._reply(msg),
         });
         this.notes.onLog = (level, line, data) => this._log(level, line, data);
     }
@@ -53,14 +81,82 @@ class StreamNotebookServer {
         auth.onChange = () => this._applySources();
         this._applySources();
 
-        this.server.listen(PORT, () => {
+        this.port = await this._listen();
+
+        // Deliberately ASCII-only: the Windows console code page mangles emoji
+        // and box-drawing characters, and garbled text on first launch reads as
+        // "it's broken" to the non-technical people this is built for.
+        console.log('');
+        console.log('  Stream Notebook is running');
+        console.log('  ---------------------------------------------');
+        console.log(`  Dashboard   http://localhost:${this.port}`);
+        console.log(`  OBS overlay http://localhost:${this.port}/overlay.html`);
+        if (this.port !== PREFERRED_PORT) {
             console.log('');
-            console.log('  📓  Stream Notebook is running');
-            console.log('  ─────────────────────────────────────────────');
-            console.log(`  Dashboard   http://localhost:${PORT}`);
-            console.log(`  OBS overlay http://localhost:${PORT}/overlay.html`);
-            console.log('');
+            console.log(`  Note: port ${PREFERRED_PORT} was busy, so this moved to ${this.port}.`);
+            console.log('  Use the addresses above - the older ones will not work.');
+        }
+        console.log('');
+        console.log('  Keep this window open. Closing it turns the notebook off.');
+        console.log('');
+
+        if (!PORT_FROM_ENV) this._openDashboard();
+    }
+
+    /**
+     * Is a Stream Notebook already running on this port? Distinguishes "some
+     * other program has 8765" (walk to 8766) from "the user double-clicked
+     * start.bat twice" (do NOT start a second one).
+     *
+     * Two notebooks is far worse than it sounds: OBS stays pointed at the first,
+     * but the dashboard that opens belongs to the second, so every setting the
+     * user changes silently fails to affect what's on screen.
+     */
+    static async findExisting(port) {
+        try {
+            const res = await fetch(`http://localhost:${port}/api/status`, {
+                signal: AbortSignal.timeout(1500),
+            });
+            if (!res.ok) return false;
+            const body = await res.json();
+            return body && body.ok === true && typeof body.overlayUrl === 'string';
+        } catch (_) {
+            return false; // nothing there, or something that isn't us
+        }
+    }
+
+    /**
+     * Bind the preferred port, walking upward if it's taken. Something else
+     * holding 8765 is the one failure a non-technical user hits and cannot
+     * diagnose, so we route around it rather than reporting it.
+     */
+    _listen() {
+        return new Promise((resolve, reject) => {
+            let port = PREFERRED_PORT;
+
+            const attempt = () => {
+                const onError = err => {
+                    if (err.code !== 'EADDRINUSE' || port >= PREFERRED_PORT + PORT_ATTEMPTS) {
+                        return reject(err);
+                    }
+                    port += 1;
+                    attempt();
+                };
+
+                this.server.once('error', onError);
+                this.server.listen(port, () => {
+                    this.server.removeListener('error', onError);
+                    resolve(port);
+                });
+            };
+
+            attempt();
         });
+    }
+
+    /** Pop the dashboard in the default browser — the bat file can't, it doesn't know the port. */
+    _openDashboard() {
+        openUrl(`http://localhost:${this.port}`);
     }
 
     // ─── Game resolution ────────────────────────────────────────────────────
@@ -102,28 +198,22 @@ class StreamNotebookServer {
 
         if (this.chat) { this.chat.stop(); this.chat = null; }
 
-        if (s.chatSource === 'twitch') {
-            this.chat = new TwitchChat({
-                onMessage: msg => this.notes.handleEvent({ event: 'chat-message', data: msg }),
-                onStatus: st => {
-                    this.chatStatus = st;
-                    this._log(st.state === 'error' ? 'error' : 'info', `💬 Twitch chat: ${st.detail}`);
-                },
-            });
-            this.chat.start();
-        } else {
-            this.chatStatus = { source: 'streamerbot', state: 'listening', detail: 'Waiting for Streamer.bot events' };
-        }
+        this.chat = new TwitchChat({
+            onMessage: msg => this.notes.handleEvent({ event: 'chat-message', data: msg }),
+            onStatus: st => {
+                this.chatStatus = st;
+                this._log(st.state === 'error' ? 'error' : 'info', `💬 Twitch chat: ${st.detail}`);
+            },
+        });
+        this.chat.start();
 
         this._startCategoryWatch();
         this.notes._loadConfig();  // pick up permission changes without a restart
         this.notes._refreshGame('settings');
     }
 
-    _reply(message, platform) {
-        const s = settings.get();
-        if (!s.chatReplies) return;
-        if (s.chatSource === 'streamerbot') return sendViaStreamerbot(message, platform);
+    _reply(message) {
+        if (!settings.get().chatReplies) return;
         if (this.chat) this.chat.say(message);
     }
 
@@ -157,6 +247,39 @@ class StreamNotebookServer {
         this.app.post('/api/notes/chapter/:id/unarchive-all', (req, res) => withNotes(res, s => s.mgmtUnarchiveAll(+req.params.id)));
         this.app.post('/api/notes/overlay', (req, res) => withNotes(res, s => ({ state: s.mgmtOverlay(req.body.action) })));
 
+        // ── Start with Windows ──
+        // Creates/removes a Startup-folder shortcut. The manual equivalent is
+        // Win+R -> shell:startup -> right-drag, which this audience will not do.
+        this.app.get('/api/autostart', (req, res) => res.json({
+            ok: true, supported: autostart.supported(), enabled: autostart.isEnabled(),
+        }));
+
+        this.app.post('/api/autostart', async (req, res) => {
+            try {
+                if (req.body && req.body.enabled) await autostart.enable();
+                else await autostart.disable();
+                res.json({ ok: true, supported: autostart.supported(), enabled: autostart.isEnabled() });
+            } catch (err) {
+                res.status(400).json({ ok: false, error: err.message });
+            }
+        });
+
+        // ── Stop the notebook from the dashboard ──
+        // Otherwise the only way to stop it is closing a black console window,
+        // which nobody has been told is the off switch.
+        this.app.post('/api/shutdown', (req, res) => {
+            res.json({ ok: true });
+            this._log('info', 'Shutdown requested from the dashboard');
+            // Let the response flush before the process goes away.
+            setTimeout(() => {
+                console.log('');
+                console.log('  Notebook stopped from the dashboard.');
+                console.log('  Double-click start.bat to start it again.');
+                console.log('');
+                process.exit(0);
+            }, 250);
+        });
+
         // ── Settings (dashboard-managed; never hand-edited) ──
         this.app.get('/api/settings', (req, res) => res.json({ ok: true, settings: settings.publicView() }));
         this.app.post('/api/settings', (req, res) => {
@@ -183,7 +306,7 @@ class StreamNotebookServer {
             twitch: auth.status(),
             game: this.notes.currentGame ? this.notes.currentGame.name : null,
             persists: !!this.notes.db,
-            overlayUrl: `http://localhost:${PORT}/overlay.html`,
+            overlayUrl: `http://localhost:${this.port}/overlay.html`,
             logs: this.logs.slice(-60),
         }));
     }
@@ -209,7 +332,8 @@ class StreamNotebookServer {
                     return;
                 }
 
-                // Everything else (including chat-message from Streamer.bot).
+                // Everything else. `chat-message` is still accepted here, which is
+                // how the service is driven in testing; nothing user-facing sends it.
                 try { this.notes.handleEvent(msg, socket); }
                 catch (err) { this._log('error', `Event failed: ${err.message}`); }
             });
@@ -224,7 +348,25 @@ class StreamNotebookServer {
     }
 }
 
-new StreamNotebookServer().start().catch(err => {
+(async () => {
+    // Already running? Show them that one instead of quietly starting a rival.
+    if (await StreamNotebookServer.findExisting(PREFERRED_PORT)) {
+        console.log('');
+        console.log('  Stream Notebook is already running.');
+        console.log('  ---------------------------------------------');
+        console.log(`  Opening the dashboard at http://localhost:${PREFERRED_PORT}`);
+        console.log('');
+        console.log('  You only need one copy running. To stop it, use the');
+        console.log('  Stop button on the dashboard, or close its window.');
+        console.log('');
+        if (!PORT_FROM_ENV) openUrl(`http://localhost:${PREFERRED_PORT}`);
+        // Give the browser a moment to launch before this window disappears.
+        setTimeout(() => process.exit(0), 2000);
+        return;
+    }
+
+    await new StreamNotebookServer().start();
+})().catch(err => {
     console.error('Failed to start:', err);
     process.exit(1);
 });

@@ -11,70 +11,130 @@ Runs on your own PC. Nothing to sign up for, no monthly anything.
 
 ![commands](https://img.shields.io/badge/chat-!note-9146FF) ![obs](https://img.shields.io/badge/OBS-browser%20source-000) ![node](https://img.shields.io/badge/node-18%2B-3c873a)
 
+<!-- SCREENSHOT: the notebook overlaid on real gameplay. See docs/README-images.md -->
+![The notebook on stream](docs/img/overlay-on-stream.png)
+
+---
+
+## 📥 Get it
+
+<h3 align="center">
+  <a href="https://github.com/iamtheratio/stream-notebook/archive/refs/heads/main.zip">⬇ Download Stream Notebook</a>
+</h3>
+
+<p align="center"><sub>Downloads a ZIP. Unzip it, double-click <code>start.bat</code>, and you're going.<br>
+Full steps below — the whole thing takes about five minutes.</sub></p>
+
 ---
 
 ## What you need
 
-- **Windows PC** (macOS and Linux work too — run `npm install && npm start` instead of the .bat)
-- **[Node.js](https://nodejs.org)** — grab the LTS installer, click through the defaults
-- **OBS** (or Streamlabs, or anything that supports browser sources)
-- A **Twitch account**
+- A **Windows PC**
+- **OBS** (or Streamlabs — anything that can add a "browser source")
+- Your **Twitch account**
+- **[Node.js](https://nodejs.org)** — this is the only thing you might not have.
+  Click the big green **LTS** download button on that page, run the installer, and
+  click Next until it finishes. You never have to open it or look at it again.
 
-You do *not* need Streamer.bot, Mix It Up, a bot account, or an API key.
+That's everything. You do **not** need Streamer.bot, Mix It Up, a second bot
+account, an API key, or anything you have to pay for or sign up to.
+
+<sub>On a Mac or Linux? It works — open a terminal in the folder and run
+`npm install && npm start` instead of double-clicking `start.bat`.</sub>
 
 ---
 
 ## Setup
 
-### 1. Download and start it
+### Step 1 — Unzip it and double-click `start.bat`
 
-Download this repo (green **Code** button → **Download ZIP**), unzip it somewhere
-sensible like `C:\StreamNotebook`, then **double-click `start.bat`**.
+Unzip the download somewhere you'll find it again — `C:\StreamNotebook` is a good
+spot. **Don't run it from inside the ZIP**, Windows won't let it work properly.
 
-The first run installs a few things and takes a minute or two. After that it's instant.
+Open the folder and **double-click `start.bat`**.
 
-Your browser opens to the dashboard at **http://localhost:8765**. Leave the black
-console window open — that's the server. Closing it stops the notebook.
+<!-- SCREENSHOT: the unzipped folder in Explorer, start.bat highlighted -->
+![The folder, with start.bat highlighted](docs/img/01-start-bat.png)
 
-### 2. Connect Twitch
+A black window opens with white text. **That's normal — that's the notebook
+running.** Leave it open the whole time you stream; closing it turns the notebook
+off.
 
-Click **Connect with Twitch**. You'll get a 6-character code and a link to
-`twitch.tv/activate`. Enter the code there, approve, and the dashboard turns green
-on its own.
+The very first time, it spends a minute or two setting itself up. After that it
+starts in a couple of seconds.
 
-That's the whole authentication step. No tokens to copy, no app to register.
+Your web browser then opens by itself to the dashboard. If it doesn't, type
+**localhost:8765** into your browser's address bar.
 
-> **What it can do:** read your chat, post short confirmations, and see which game
-> your channel is set to. It cannot change your stream, run ads, or see anything else.
+> **Windows may warn you about the file.** If you see "Windows protected your PC",
+> click **More info** → **Run anyway**. That warning appears for anything
+> downloaded from the internet that hasn't paid for a signing certificate.
 
-### 3. Add the overlay to OBS
+### Step 2 — Click "Connect with Twitch"
 
-In OBS: **Sources → + → Browser**, then:
+On the dashboard, click the purple **Connect with Twitch** button.
 
-| Field | Value |
+You'll get a **6-character code**. Click the link next to it, sign in to Twitch if
+it asks, type the code in, and approve.
+
+<!-- SCREENSHOT: dashboard showing the 6-character device code -->
+![The dashboard showing your code](docs/img/02-connect-twitch.png)
+
+Go back to the dashboard — it turns **green** on its own within a few seconds. You
+don't need to refresh or click anything else.
+
+> **There's nothing to copy, paste, or keep safe here.** No tokens, no passwords, no
+> developer account.
+>
+> **What it's allowed to do:** read your chat, post short confirmations like
+> "Note #3 added", and see which game your channel is set to. That's the complete
+> list. It cannot change your stream title, start ads, see your email, or read your
+> DMs.
+
+### Step 3 — Add it to OBS
+
+In OBS, look at the **Sources** box at the bottom. Click the **+** → choose
+**Browser** → give it a name like `Stream Notebook` → **OK**.
+
+A settings window opens. Fill it in like this:
+
+| Field | What to put |
 |---|---|
-| URL | `http://localhost:8765/overlay.html` |
-| Width | `1920` |
-| Height | `1080` |
-| Shutdown source when not visible | ✅ ticked |
-| Refresh browser when scene becomes active | ✅ ticked |
+| **URL** | `http://localhost:8765/overlay.html` |
+| **Width** | `1920` |
+| **Height** | `1080` |
+| **Shutdown source when not visible** | ✅ tick this |
+| **Refresh browser when scene becomes active** | ✅ tick this |
 
-The dashboard has a **Copy** button for that URL.
+<!-- SCREENSHOT: OBS browser source dialog, fields filled in, tickboxes ticked -->
+![The OBS browser source window, filled in](docs/img/03-obs-browser-source.png)
 
-The notebook sits in the **bottom-left** and stays hidden until someone adds a note
-(it appears for ~20 seconds) or you run `!note show` to pin it. Drag the source to
-reposition it.
+Click **OK**. Don't worry that nothing appears yet — **the notebook is invisible
+until there's a note to show.** That's on purpose, so it isn't sitting on your
+screen empty.
 
-### 4. Try it
+<sub>Rather not type that URL? The dashboard has a **Copy** button that puts it on
+your clipboard — then just click in the URL box in OBS and press Ctrl+V.</sub>
 
-Type this in your own chat:
+### Step 4 — Test it
+
+Go to your own Twitch chat and type:
 
 ```
 !note this is my first note
 ```
 
-It should appear on the overlay within a second. If it doesn't, see
-[Troubleshooting](#troubleshooting).
+The notebook should slide into the **bottom-left** of your OBS preview within a
+second, show your note, then tuck away again after about 20 seconds.
+
+<!-- SCREENSHOT: the notebook visible in OBS preview with one note -->
+![Your first note](docs/img/04-first-note.png)
+
+**Seeing it? You're completely set up.** Drag the source around in OBS if you want
+it somewhere other than the bottom-left.
+
+**Nothing happened?** Jump to [Troubleshooting](#troubleshooting) — it's almost
+always one of two easy things.
 
 ---
 
@@ -153,10 +213,12 @@ Useful for prepping a run in advance, or cleaning up after a long stream.
 
 ## Options explained
 
-**Where chat comes from**
-- **Twitch** (default) — connects straight to Twitch. Nothing else to install.
-- **Streamer.bot** — uses your existing Streamer.bot setup, which also gets you
-  **YouTube and TikTok**. Requires the extra step in [`streamerbot/`](streamerbot/).
+**Start automatically when I turn on my PC** — the notebook starts by itself and
+waits, minimised, in your taskbar. Worth turning on, so you can't forget to start
+it before a stream.
+
+**Stop the notebook** — turns it off completely. Your notes are saved. Double-click
+`start.bat` to bring it back.
 
 **Reply in chat** — posts short confirmations like `📓 Note #3 added.` Turn it off
 for a quieter chat; the overlay still updates either way.
@@ -193,29 +255,14 @@ make sure you're typing in the chat of the account you connected.
 Your token expired or access was revoked. Click **Disconnect**, then
 **Connect with Twitch** again.
 
-**Port 8765 is already in use**
-Something else has the port. Close it, or set a different one:
-`set PORT=8790 && node server.js` — then update the OBS browser source URL to match.
+**The address isn't localhost:8765**
+If something else on your PC was already using 8765, Stream Notebook quietly moves
+to the next free port and tells you which one in its window. Use the address it
+prints, and copy the overlay URL from the dashboard so OBS matches.
 
 **Notes aren't saving**
 The dashboard will say so. Usually means `better-sqlite3` failed to install —
 delete the `node_modules` folder and run `start.bat` again.
-
----
-
-## For the person sharing this repo
-
-Before handing out the link, register a Twitch application once so nobody
-downstream has to:
-
-1. Go to [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps) → **Register Your Application**
-2. **OAuth Redirect URL:** `http://localhost` (unused by device flow, but the form requires it)
-3. **Category:** Chat Bot · **Client Type:** Public
-4. Copy the Client ID into `CLIENT_ID` in [`lib/TwitchAuth.js`](lib/TwitchAuth.js)
-
-A public client ID isn't a secret — it's meant to ship in the app, which is exactly
-why this flow needs no client secret at all. Users who download the repo then have
-genuinely zero configuration.
 
 ---
 
@@ -236,11 +283,10 @@ To move to a new PC, copy the `data/` folder across.
 ## How it works
 
 ```
-Twitch chat ──┐
-              ├──► chat adapter ──► NotesService ──► SQLite (data/notes.db)
-Streamer.bot ─┘                          │
-                                         └──► WebSocket ──► overlay in OBS
-                                                        └──► notes manager page
+Twitch chat ──► TwitchChat (IRC) ──► NotesService ──► SQLite (data/notes.db)
+                                          │
+                                          └──► WebSocket ──► overlay in OBS
+                                                         └──► notes manager page
 ```
 
 The overlay never holds authoritative state — the server sends a full render on

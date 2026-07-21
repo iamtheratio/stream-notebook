@@ -201,24 +201,20 @@
     </div>
   </div>
 
-  <!-- Step 3 — Settings -->
+  <!-- Step 3 — try it. The required path ends here; everything below is optional. -->
   <div class="card">
-    <h2>Step 3 · Options</h2>
-    <p class="hint">Saved automatically. Changes apply immediately — no restart needed.</p>
+    <h2>Step 3 · Try it</h2>
+    <p class="hint">
+      Type <code>!note hello</code> in your own Twitch chat. It should pop up on the
+      overlay within a second. <b>That’s it — you’re set up.</b>
+      Everything below is optional and already set to sensible defaults.
+    </p>
+  </div>
 
-    <div class="row">
-      <div class="row-text">
-        <div class="row-title">Where chat comes from</div>
-        <div class="row-sub">
-          <b>Twitch</b> connects directly — nothing else to install.
-          <b>Streamer.bot</b> uses your existing setup and covers YouTube and TikTok too.
-        </div>
-      </div>
-      <div class="seg" id="seg-chat">
-        <button data-v="twitch" onclick="setChatSource('twitch')">Twitch</button>
-        <button data-v="streamerbot" onclick="setChatSource('streamerbot')">Streamer.bot</button>
-      </div>
-    </div>
+  <!-- Optional settings -->
+  <div class="card">
+    <h2>Options</h2>
+    <p class="hint">All optional. Saved automatically, and they apply straight away — no restart.</p>
 
     <div class="row">
       <div class="row-text">
@@ -252,16 +248,38 @@
 
     <div class="row">
       <div class="row-text">
+        <div class="row-title">Moderators can manage notes</div>
+        <div class="row-sub">Full control — add, edit, mark done, delete and clear. Turn this off if you’d rather be the only one who can change the notebook.</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="s-mods" onchange="save()"><span class="slider"></span></label>
+    </div>
+
+    <div class="row">
+      <div class="row-text">
         <div class="row-title">VIPs can add notes</div>
-        <div class="row-sub">Moderators and you can always add. This lets VIPs add them too (they still can’t delete or clear).</div>
+        <div class="row-sub">Adding only — they can’t edit, delete or clear.</div>
       </div>
       <label class="toggle"><input type="checkbox" id="s-vip" onchange="save()"><span class="slider"></span></label>
     </div>
 
     <div class="row">
       <div class="row-text">
+        <div class="row-title">Subscribers can add notes</div>
+        <div class="row-sub">Adding only. On a big channel this is a lot of people — start it off and see how it goes.</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="s-subs" onchange="save()"><span class="slider"></span></label>
+    </div>
+
+    <div class="row">
+      <div class="row-text">
+        <div class="row-sub">You always have full control, whatever these are set to. Everyone else can still use <code>!note show</code>, <code>hide</code> and <code>list</code>.</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-text">
         <div class="row-title">Viewer cooldown</div>
-        <div class="row-sub">Seconds a regular viewer must wait between <code>!note show</code> / <code>hide</code> / <code>list</code>. Stops overlay spam. 0 disables it.</div>
+        <div class="row-sub">Seconds a regular viewer must wait between <code>!note show</code> / <code>hide</code> / <code>list</code>. Stops people spamming the overlay on and off. 0 turns the wait off.</div>
       </div>
       <input type="number" id="s-cooldown" min="0" max="300" style="width:80px" onchange="save()">
     </div>
@@ -279,11 +297,45 @@
     </div>
   </div>
 
+  <!-- Starting and stopping. Without this the only off switch is closing an -->
+  <!-- unlabelled black window, which nobody has been told about.            -->
+  <div class="card">
+    <h2>Starting &amp; stopping</h2>
+
+    <div class="row" id="row-autostart" style="display:none">
+      <div class="row-text">
+        <div class="row-title">Start automatically when I turn on my PC</div>
+        <div class="row-sub">The notebook starts by itself and waits, minimised, in your taskbar. Recommended — otherwise you have to remember to start it before every stream.</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="s-autostart" onchange="setAutostart(this.checked)"><span class="slider"></span></label>
+    </div>
+
+    <div class="row">
+      <div class="row-text">
+        <div class="row-title">Stop the notebook</div>
+        <div class="row-sub">Turns it off completely. Your notes are saved and will still be there next time. To start it again, double-click <code>start.bat</code>.</div>
+      </div>
+      <button class="ghost" onclick="confirmShutdown()">Stop notebook</button>
+    </div>
+  </div>
+
   <div class="card">
     <h2>Activity</h2>
     <div id="log"><span class="empty">Waiting for activity…</span></div>
   </div>
 
+</div>
+
+<!-- Generic confirm. Native confirm() is banned in this project. -->
+<div class="modal-bg" id="confirm">
+  <div class="modal">
+    <h3 id="c-title">Are you sure?</h3>
+    <p id="c-text"></p>
+    <div class="modal-actions">
+      <button class="primary" id="c-ok">Confirm</button>
+      <button class="ghost" onclick="closeConfirm()">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <!-- Twitch device-code modal -->
@@ -345,11 +397,13 @@ async function loadSettings() {
   S = r.settings;
 
   document.getElementById('s-replies').checked = S.chatReplies;
+  document.getElementById('s-mods').checked = S.modsCanManage;
   document.getElementById('s-vip').checked = S.vipCanAdd;
+  document.getElementById('s-subs').checked = S.subsCanAdd;
   document.getElementById('s-cooldown').value = S.publicCooldownSec;
   document.getElementById('s-manual-game').value = S.manualGame || '';
-  setSeg('seg-chat', S.chatSource);
   setSeg('seg-game', S.gameSource);
+  loadAutostart();
   document.getElementById('row-manual-game').style.display =
     S.gameSource === 'manual' ? 'flex' : 'none';
 }
@@ -357,10 +411,11 @@ async function loadSettings() {
 async function save(patch) {
   const body = Object.assign({
     chatReplies: document.getElementById('s-replies').checked,
+    modsCanManage: document.getElementById('s-mods').checked,
     vipCanAdd: document.getElementById('s-vip').checked,
+    subsCanAdd: document.getElementById('s-subs').checked,
     publicCooldownSec: Number(document.getElementById('s-cooldown').value) || 0,
     manualGame: document.getElementById('s-manual-game').value.trim() || 'Stream Notes',
-    chatSource: S.chatSource,
     gameSource: S.gameSource,
   }, patch || {});
 
@@ -370,7 +425,60 @@ async function save(patch) {
   refresh();
 }
 
-function setChatSource(v) { S.chatSource = v; setSeg('seg-chat', v); save(); }
+
+/* Generic in-page confirm — this project never uses native confirm(). */
+function showConfirm(title, text, okLabel, onOk) {
+  document.getElementById('c-title').textContent = title;
+  document.getElementById('c-text').textContent = text;
+  const ok = document.getElementById('c-ok');
+  ok.textContent = okLabel || 'Confirm';
+  ok.onclick = () => { closeConfirm(); onOk(); };
+  document.getElementById('confirm').classList.add('show');
+}
+
+function closeConfirm() { document.getElementById('confirm').classList.remove('show'); }
+
+/* ── Starting and stopping ───────────────────────────────────────────── */
+
+async function loadAutostart() {
+  try {
+    const r = await api('/api/autostart');
+    // Hidden entirely off Windows, where there's no Startup folder to write to.
+    document.getElementById('row-autostart').style.display = r.supported ? 'flex' : 'none';
+    document.getElementById('s-autostart').checked = !!r.enabled;
+  } catch (_) { /* leave it hidden */ }
+}
+
+async function setAutostart(enabled) {
+  const box = document.getElementById('s-autostart');
+  try {
+    const r = await api('/api/autostart', 'POST', { enabled });
+    if (!r.ok) throw new Error(r.error || 'Could not change that setting.');
+    box.checked = !!r.enabled;
+    toast(r.enabled ? 'Will start automatically from now on' : 'Will no longer start automatically');
+  } catch (e) {
+    box.checked = !enabled;   // put the switch back; it didn't take
+    toast(e.message, true);
+  }
+}
+
+function confirmShutdown() {
+  showConfirm(
+    'Stop the notebook?',
+    'The overlay will disappear from your stream until you start it again by ' +
+    'double-clicking start.bat. Your notes are saved and will still be here.',
+    'Stop notebook',
+    async () => {
+      try { await api('/api/shutdown', 'POST', {}); } catch (_) { /* it's going away; a failed reply is expected */ }
+      document.body.innerHTML =
+        '<div style="max-width:520px;margin:22vh auto;text-align:center;color:#a8b2d1;font-size:14px;line-height:1.7">' +
+        '<h1 style="color:#e6edf3;font-size:20px;margin:0 0 12px">Notebook stopped</h1>' +
+        'It is no longer running, and the overlay is off.<br><br>' +
+        'To start it again, double-click <code>start.bat</code> in your Stream Notebook folder.<br><br>' +
+        '<span style="color:#5a6785;font-size:12.5px">You can close this tab.</span></div>';
+    }
+  );
+}
 
 function setGameSource(v) {
   S.gameSource = v;
