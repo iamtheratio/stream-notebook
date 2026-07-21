@@ -112,9 +112,18 @@ A settings window opens. Fill it in like this:
 | **Shutdown source when not visible** | ✅ tick this |
 | **Refresh browser when scene becomes active** | ✅ tick this |
 
-<sub>Streaming **vertically** (TikTok, Shorts, phone-shaped)? Use your canvas size
-— e.g. `1080` × `1920` — instead. Then set **Notebook size** to *Huge* in the
-dashboard, or it'll look tiny.</sub>
+**Also stream vertically (TikTok, Shorts)?** Add a **second** browser source on
+your vertical scene:
+
+| Field | What to put |
+|---|---|
+| **URL** | `http://localhost:8765/overlay.html?type=vertical` |
+| **Width** | `1080` |
+| **Height** | `1920` |
+
+Both can run at the same time, and each has its own position and size in the
+dashboard. The dashboard has a **Copy** button for each URL — you don't have to
+type them.
 
 <!-- SCREENSHOT: OBS browser source dialog, fields filled in, tickboxes ticked -->
 <!-- TODO screenshot (see docs/README-images.md) — uncomment when added:
@@ -211,7 +220,7 @@ spam-flicker your overlay. You and your mods are exempt.
 files to edit.
 
 - **Status** — Twitch, chat, current game, and whether notes are saving
-- **Options** — chat source, chat replies, game organisation, VIP permissions, cooldown
+- **Options** — chat replies, notebook position and size, who can add notes, cooldown
 - **Overlay Controls** — show/hide/on/off buttons, if you'd rather click than type
 - **Activity** — a live log, useful when something isn't working
 
@@ -223,17 +232,25 @@ Edits to the game you're currently playing show up on stream instantly.
 
 Useful for prepping a run in advance, or cleaning up after a long stream.
 
+**Showing an older game on stream.** Click the 📌 next to any game to put its
+notes on screen, even if you're playing something else. The notebook stays there
+until you unpin it — it won't jump back when your Twitch category changes. The bar
+at the top says **PINNED** while this is on, with an **Unpin** link.
+
+Handy for pulling up last week's boss notes, or prepping in Just Chatting.
+
 ---
 
 ## Options explained
 
-**Where the notebook sits** — which corner of your stream it appears in. Changes
-apply live; you don't need to touch OBS.
+**Notebook position & size** — which corner it sits in, and how big it is.
 
-**Notebook size** — Small through Huge. Worth turning up on a 1440p/4K canvas,
-where the default looks small, and on **vertical (phone-shaped) streams**, where
-Huge is usually about right. The text is re-drawn at each size rather than
-stretched, so it stays sharp.
+Your **normal** stream and your **vertical** stream get their own settings, so you
+can run both at once and have each look right. Changes appear straight away — you
+don't need to touch OBS.
+
+Sizes go Small → Huge. Turn it up on a big (1440p/4K) screen or a vertical one,
+where the normal size looks small. Text stays sharp at every size.
 
 **Stop the notebook** — turns it off completely. Your notes are saved. Double-click
 `start.bat` to bring it back.
@@ -247,7 +264,16 @@ for a quieter chat; the overlay still updates either way.
 - **Manual** — files everything under one name you choose. Good for Just Chatting
   or if you don't change categories.
 
-**VIPs can add notes** — off by default. Lets VIPs add notes, but not delete or clear.
+**Who can use notes** — three switches. You always have full control.
+
+| Switch | Default | What it gives them |
+|---|---|---|
+| Moderators can manage notes | **On** | Everything — add, edit, delete, clear |
+| VIPs can add notes | Off | Adding only |
+| Subscribers can add notes | Off | Adding only |
+
+Turn moderators **off** if you'd rather be the only one who can change your notes.
+Anyone in chat can always use `!note show`, `hide` and `list`.
 
 **Viewer cooldown** — seconds a regular viewer waits between `show`/`hide`/`list`.
 Set to 0 to disable.
@@ -261,9 +287,18 @@ Right-click the browser source → **Refresh**. Check the console window is stil
 open and the dashboard shows Twitch as connected.
 
 **The notebook is blurry**
-Your OBS canvas resolution probably doesn't match your monitor. Set the browser
-source to exactly 1920×1080 and don't scale it — the notebook renders at native
-size on purpose, because scaling blurs text in OBS.
+Don't resize the source by dragging its corners in OBS — that stretches the picture
+and blurs the text. Set the browser source to the size in the table above, then use
+**Notebook size** in the dashboard instead. That redraws it properly, so it stays
+sharp.
+
+**The notebook is too small / in the wrong place**
+Dashboard → **Options** → **Notebook position & size**. Your normal and vertical
+overlays have separate settings.
+
+**The notebook is stuck on the wrong game**
+It's pinned. The bar at the top of the Manage Notes page says **PINNED** — click
+**Unpin** and it'll follow your Twitch category again.
 
 **Commands do nothing**
 Check the dashboard's **Activity** log. If chat shows red, reconnect Twitch. Also
