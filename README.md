@@ -78,9 +78,7 @@ You'll get a **6-character code**. Click the link next to it, sign in to Twitch 
 it asks, type the code in, and approve.
 
 <!-- SCREENSHOT: dashboard showing the 6-character device code -->
-<!-- TODO screenshot (see docs/README-images.md) — uncomment when added:
-![The dashboard showing your code](docs/img/02-connect-twitch.png)
--->
+![The dashboard showing your code](docs/img/02-twitch-code.png)
 
 Go back to the dashboard — it turns **green** on its own within a few seconds. You
 don't need to refresh or click anything else.
@@ -122,9 +120,7 @@ dashboard. The dashboard has a **Copy** button for each URL — you don't have t
 type them.
 
 <!-- SCREENSHOT: OBS browser source dialog, fields filled in, tickboxes ticked -->
-<!-- TODO screenshot (see docs/README-images.md) — uncomment when added:
 ![The OBS browser source window, filled in](docs/img/03-obs-browser-source.png)
--->
 
 Click **OK**. Don't worry that nothing appears yet — **the notebook is invisible
 until there's a note to show.** That's on purpose, so it isn't sitting on your
@@ -143,11 +139,6 @@ Go to your own Twitch chat and type:
 
 The notebook should slide into the **bottom-left** of your OBS preview within a
 second, show your note, then tuck away again after about 20 seconds.
-
-<!-- SCREENSHOT: the notebook visible in OBS preview with one note -->
-<!-- TODO screenshot (see docs/README-images.md) — uncomment when added:
-![Your first note](docs/img/04-first-note.png)
--->
 
 **Seeing it? You're completely set up.** Drag the source around in OBS if you want
 it somewhere other than the bottom-left.
