@@ -235,10 +235,6 @@ where the default looks small, and on **vertical (phone-shaped) streams**, where
 Huge is usually about right. The text is re-drawn at each size rather than
 stretched, so it stays sharp.
 
-**Start automatically when I turn on my PC** — the notebook starts by itself and
-waits, minimised, in your taskbar. Worth turning on, so you can't forget to start
-it before a stream.
-
 **Stop the notebook** — turns it off completely. Your notes are saved. Double-click
 `start.bat` to bring it back.
 

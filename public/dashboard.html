@@ -83,6 +83,23 @@
   input:focus, select:focus { border-color: rgba(145,70,255,.7); }
   select option { background: #1a1a2e; }
 
+  /* Grouped settings — two overlays, each with its own position + size. */
+  /* Each overlay URL, plainly listed with the OBS size next to it. */
+  .urlrow { margin-bottom: 14px; }
+  .urlrow-hd { font-size: 13px; font-weight: 600; color: #e6edf3; margin-bottom: 6px; }
+  .urlrow-hd span { font-weight: normal; color: #8892b0; font-size: 12px; margin-left: 6px; }
+
+  .group { margin: 4px 0 6px; padding: 2px 0 0; }
+  .group-hd { font-size: 13.5px; font-weight: 600; color: #e6edf3; }
+  .group-sub { font-size: 12px; color: #8892b0; margin: 2px 0 4px; }
+  .group .row:last-child { border-bottom: none; }
+  .pair { display: flex; gap: 10px; flex-shrink: 0; }
+  /* Two bare dropdowns side by side give no clue which is which. */
+  .fld { display: flex; flex-direction: column; gap: 3px; }
+  .fld > span { font-size: 10.5px; font-weight: 600; letter-spacing: .06em;
+                text-transform: uppercase; color: #8892b0; }
+  @media (max-width: 620px) { .pair { flex-direction: column; } }
+
   /* Toggle switch */
   .toggle { position: relative; width: 44px; height: 24px; flex: 0 0 auto; }
   .toggle input { opacity: 0; width: 0; height: 0; }
@@ -191,37 +208,27 @@
   <div class="card">
     <h2>Step 2 · Add the overlay to OBS</h2>
     <p class="hint">
-      In OBS: <b>Sources → + → Browser</b>. Paste this URL, set the size to
-      <b>1920 × 1080</b>, and tick <b>Shutdown source when not visible</b>.
-      The notebook stays hidden until a note is added or you run <code>!note show</code>.
+      In OBS: <b>Sources → + → Browser</b>. Paste the URL and set the size.
     </p>
-    <div class="url-box">
-      <input type="text" id="overlay-url" readonly value="http://localhost:8765/overlay.html">
-      <button class="primary" onclick="copyUrl()">Copy</button>
+
+    <!-- Both listed plainly. Same page, different layout — the URL names which -->
+    <!-- overlay it is, and Options decides how each one looks.                 -->
+    <div class="urlrow">
+      <div class="urlrow-hd">Normal stream <span>size 1920 × 1080</span></div>
+      <div class="url-box">
+        <input type="text" id="overlay-url" readonly value="http://localhost:8765/overlay.html">
+        <button class="primary" onclick="copyUrl()">Copy</button>
+      </div>
     </div>
 
-    <!-- Each browser source carries its own size/corner in the URL, so a -->
-    <!-- horizontal and a vertical overlay can run at once off this page.  -->
-    <details class="advanced" style="margin-top:14px">
-      <summary>Also streaming vertically? (TikTok, Shorts)</summary>
-      <p class="hint" style="margin:6px 0 10px">
-        Add a <b>second</b> browser source on your vertical scene, sized to your
-        vertical canvas (usually <b>1080 × 1920</b>), and use this URL instead.
-        It’s the same notebook — the extra bit on the end just makes it bigger and
-        puts it top-left, which suits a tall screen. Your horizontal overlay is
-        unaffected.
-      </p>
+    <div class="urlrow">
+      <div class="urlrow-hd">Vertical stream <span>size 1080 × 1920</span></div>
       <div class="url-box">
         <input type="text" id="overlay-url-vertical" readonly>
         <button class="primary" onclick="copyUrl('overlay-url-vertical')">Copy</button>
       </div>
-      <p class="setup-note" style="margin:8px 0 0">
-        Tweak <code>scale</code> (0.75–3) and <code>corner</code>
-        (<code>bottom-left</code>, <code>bottom-right</code>, <code>top-left</code>,
-        <code>top-right</code>) in the URL to taste. Any source without them uses
-        the size and position set in Options below.
-      </p>
-    </details>
+    </div>
+
   </div>
 
   <!-- Step 3 — try it. The required path ends here; everything below is optional. -->
@@ -242,7 +249,7 @@
     <div class="row">
       <div class="row-text">
         <div class="row-title">Reply in chat</div>
-        <div class="row-sub">Posts short confirmations like “📓 Note #3 added.” Turn off for a quieter chat — the overlay still updates.</div>
+        <div class="row-sub">Posts “📓 Note #3 added.” in chat. Off = quieter chat, overlay still works.</div>
       </div>
       <label class="toggle"><input type="checkbox" id="s-replies" onchange="save()"><span class="slider"></span></label>
     </div>
@@ -272,7 +279,7 @@
     <div class="row">
       <div class="row-text">
         <div class="row-title">Moderators can manage notes</div>
-        <div class="row-sub">Full control — add, edit, mark done, delete and clear. Turn this off if you’d rather be the only one who can change the notebook.</div>
+        <div class="row-sub">Add, edit, delete, clear. Turn off to be the only one who can change notes.</div>
       </div>
       <label class="toggle"><input type="checkbox" id="s-mods" onchange="save()"><span class="slider"></span></label>
     </div>
@@ -280,7 +287,7 @@
     <div class="row">
       <div class="row-text">
         <div class="row-title">VIPs can add notes</div>
-        <div class="row-sub">Adding only — they can’t edit, delete or clear.</div>
+        <div class="row-sub">Adding only. No editing or deleting.</div>
       </div>
       <label class="toggle"><input type="checkbox" id="s-vip" onchange="save()"><span class="slider"></span></label>
     </div>
@@ -288,48 +295,77 @@
     <div class="row">
       <div class="row-text">
         <div class="row-title">Subscribers can add notes</div>
-        <div class="row-sub">Adding only. On a big channel this is a lot of people — start it off and see how it goes.</div>
+        <div class="row-sub">Adding only. That’s a lot of people on a big channel.</div>
       </div>
       <label class="toggle"><input type="checkbox" id="s-subs" onchange="save()"><span class="slider"></span></label>
     </div>
 
     <div class="row">
       <div class="row-text">
-        <div class="row-sub">You always have full control, whatever these are set to. Everyone else can still use <code>!note show</code>, <code>hide</code> and <code>list</code>.</div>
+        <div class="row-sub">You always have full control. Anyone can use <code>!note show</code>, <code>hide</code> and <code>list</code>.</div>
       </div>
     </div>
 
-    <div class="row">
-      <div class="row-text">
-        <div class="row-title">Where the notebook sits</div>
-        <div class="row-sub">Which corner of your stream it appears in. Changes show up straight away — no need to touch OBS.</div>
-      </div>
-      <select id="s-corner" onchange="save()">
-        <option value="bottom-left">Bottom left</option>
-        <option value="bottom-right">Bottom right</option>
-        <option value="top-left">Top left</option>
-        <option value="top-right">Top right</option>
-      </select>
-    </div>
+    <!-- Two overlays can run at once, so each gets its own position + size. -->
+    <div class="group">
+      <div class="group-hd">Notebook position &amp; size</div>
+      <div class="group-sub">Changes appear straight away.</div>
 
-    <div class="row">
-      <div class="row-text">
-        <div class="row-title">Notebook size</div>
-        <div class="row-sub">Bigger is easier to read on a large or vertical (phone-shaped) stream. The text stays sharp at every size.</div>
+      <div class="row">
+        <div class="row-text">
+          <div class="row-title">Normal stream</div>
+        </div>
+        <div class="pair">
+          <label class="fld"><span>Position</span>
+            <select id="s-corner" onchange="save()">
+              <option value="bottom-left">Bottom left</option>
+              <option value="bottom-right">Bottom right</option>
+              <option value="top-left">Top left</option>
+              <option value="top-right">Top right</option>
+            </select>
+          </label>
+          <label class="fld"><span>Size</span>
+            <select id="s-scale" onchange="save()">
+              <option value="0.75">Small</option>
+              <option value="1">Normal</option>
+              <option value="1.25">Large</option>
+              <option value="1.5">Extra large</option>
+              <option value="2">Huge</option>
+            </select>
+          </label>
+        </div>
       </div>
-      <select id="s-scale" onchange="save()">
-        <option value="0.75">Small</option>
-        <option value="1">Normal</option>
-        <option value="1.25">Large</option>
-        <option value="1.5">Extra large</option>
-        <option value="2">Huge (vertical streams)</option>
-      </select>
+
+      <div class="row">
+        <div class="row-text">
+          <div class="row-title">Vertical stream</div>
+        </div>
+        <div class="pair">
+          <label class="fld"><span>Position</span>
+            <select id="s-vcorner" onchange="save()">
+              <option value="bottom-left">Bottom left</option>
+              <option value="bottom-right">Bottom right</option>
+              <option value="top-left">Top left</option>
+              <option value="top-right">Top right</option>
+            </select>
+          </label>
+          <label class="fld"><span>Size</span>
+            <select id="s-vscale" onchange="save()">
+              <option value="0.75">Small</option>
+              <option value="1">Normal</option>
+              <option value="1.25">Large</option>
+              <option value="1.5">Extra large</option>
+              <option value="2">Huge</option>
+            </select>
+          </label>
+        </div>
+      </div>
     </div>
 
     <div class="row">
       <div class="row-text">
         <div class="row-title">Viewer cooldown</div>
-        <div class="row-sub">Seconds a regular viewer must wait between <code>!note show</code> / <code>hide</code> / <code>list</code>. Stops people spamming the overlay on and off. 0 turns the wait off.</div>
+        <div class="row-sub">Seconds viewers must wait between <code>!note show</code> / <code>hide</code> / <code>list</code>. Stops spam. 0 = no wait.</div>
       </div>
       <input type="number" id="s-cooldown" min="0" max="300" style="width:80px" onchange="save()">
     </div>
@@ -352,18 +388,10 @@
   <div class="card">
     <h2>Starting &amp; stopping</h2>
 
-    <div class="row" id="row-autostart" style="display:none">
-      <div class="row-text">
-        <div class="row-title">Start automatically when I turn on my PC</div>
-        <div class="row-sub">The notebook starts by itself and waits, minimised, in your taskbar. Recommended — otherwise you have to remember to start it before every stream.</div>
-      </div>
-      <label class="toggle"><input type="checkbox" id="s-autostart" onchange="setAutostart(this.checked)"><span class="slider"></span></label>
-    </div>
-
     <div class="row">
       <div class="row-text">
         <div class="row-title">Stop the notebook</div>
-        <div class="row-sub">Turns it off completely. Your notes are saved and will still be there next time. To start it again, double-click <code>start.bat</code>.</div>
+        <div class="row-sub">Your notes are saved. Double-click <code>start.bat</code> to start it again.</div>
       </div>
       <button class="ghost" onclick="confirmShutdown()">Stop notebook</button>
     </div>
@@ -453,9 +481,10 @@ async function loadSettings() {
   document.getElementById('s-cooldown').value = S.publicCooldownSec;
   document.getElementById('s-corner').value = S.overlayCorner || 'bottom-left';
   document.getElementById('s-scale').value = String(S.overlayScale || 1);
+  document.getElementById('s-vcorner').value = S.verticalCorner || 'top-left';
+  document.getElementById('s-vscale').value = String(S.verticalScale || 2);
   document.getElementById('s-manual-game').value = S.manualGame || '';
   setSeg('seg-game', S.gameSource);
-  loadAutostart();
   document.getElementById('row-manual-game').style.display =
     S.gameSource === 'manual' ? 'flex' : 'none';
 }
@@ -469,6 +498,8 @@ async function save(patch) {
     publicCooldownSec: Number(document.getElementById('s-cooldown').value) || 0,
     overlayCorner: document.getElementById('s-corner').value,
     overlayScale: Number(document.getElementById('s-scale').value) || 1,
+    verticalCorner: document.getElementById('s-vcorner').value,
+    verticalScale: Number(document.getElementById('s-vscale').value) || 2,
     manualGame: document.getElementById('s-manual-game').value.trim() || 'Stream Notes',
     gameSource: S.gameSource,
   }, patch || {});
@@ -493,28 +524,6 @@ function showConfirm(title, text, okLabel, onOk) {
 function closeConfirm() { document.getElementById('confirm').classList.remove('show'); }
 
 /* ── Starting and stopping ───────────────────────────────────────────── */
-
-async function loadAutostart() {
-  try {
-    const r = await api('/api/autostart');
-    // Hidden entirely off Windows, where there's no Startup folder to write to.
-    document.getElementById('row-autostart').style.display = r.supported ? 'flex' : 'none';
-    document.getElementById('s-autostart').checked = !!r.enabled;
-  } catch (_) { /* leave it hidden */ }
-}
-
-async function setAutostart(enabled) {
-  const box = document.getElementById('s-autostart');
-  try {
-    const r = await api('/api/autostart', 'POST', { enabled });
-    if (!r.ok) throw new Error(r.error || 'Could not change that setting.');
-    box.checked = !!r.enabled;
-    toast(r.enabled ? 'Will start automatically from now on' : 'Will no longer start automatically');
-  } catch (e) {
-    box.checked = !enabled;   // put the switch back; it didn't take
-    toast(e.message, true);
-  }
-}
 
 function confirmShutdown() {
   showConfirm(
@@ -635,8 +644,7 @@ async function refresh() {
     document.getElementById('overlay-url').value = st.overlayUrl;
     // Same page, per-source overrides appended — a vertical canvas wants it
     // bigger and out of the way of the bottom-of-screen UI most apps overlay.
-    document.getElementById('overlay-url-vertical').value =
-      st.overlayUrl + '?scale=2&corner=top-left';
+    document.getElementById('overlay-url-vertical').value = st.overlayUrl + '?type=vertical';
   }
 
   // Activity log

@@ -41,7 +41,6 @@ lib/
   BaseService.js              minimal stub of upstream's base class
   Settings.js                 dashboard-managed settings store
   TwitchAuth.js               device-code OAuth + token refresh + category read
-  Autostart.js                Startup-folder shortcut, as a dashboard toggle
   adapters/
     TwitchChat.js             raw Twitch IRC over WebSocket
 public/
@@ -174,15 +173,28 @@ unless the UI says otherwise.
 
 ## Overlay size and position
 
-`overlayScale` + `overlayCorner`, applied by **`overlay.html`**, never by
-`notebook-overlay.js` — that file is byte-identical to upstream and must stay so.
-The module renders at a fixed 400x570 bottom-left, which is small on 1440p and
-badly placed on a vertical canvas.
+**Two independent sets of settings** — `overlayScale`/`overlayCorner` and
+`verticalScale`/`verticalCorner` — because one `overlay.html` feeds *every* OBS
+browser source. A streamer running widescreen and vertical at once has both live
+simultaneously, so a single set can only ever be right for one of them.
+
+`overlay.html?type=vertical` selects the vertical set; anything else uses the
+normal one. **The URL names the layout; the dashboard decides how it looks.**
+An earlier version put the numbers in the URL (`?scale=2&corner=top-left`) with
+instructions to "tweak scale (0.75–3)" — do not go back to that. This audience
+does not hand-edit query strings.
+
+Applied by **`overlay.html`**, never by `notebook-overlay.js` — that file is
+byte-identical to upstream and must stay so.
 
 Scaling uses **`zoom`, not `transform: scale`**. The module's own comment explains
 why: a transform promotes it to a composited layer and CEF then bilinear-samples
 the emote images and blurs the text. `zoom` re-lays-out and rasterizes at the new
 size, staying crisp.
+
+`--nbk-exit` makes the swipe follow the corner: a notebook parked bottom-right
+leaves to the right instead of travelling the full screen width. The module
+defaults it to the original left-hand exit, so upstream hosts are unaffected.
 
 Settings changes broadcast `notebook:layout` over the WebSocket (`_pushLayout`), so
 OBS updates live. `overlay.html` also fetches `/api/settings` on load, so it lays
@@ -197,11 +209,11 @@ console window it replaces. Signing costs real money. Revisit only if the downlo
 is signed. PowerShell tray scripts are worse still — `-ExecutionPolicy Bypass` is
 itself an antivirus heuristic.
 
+**There is no autostart, deliberately.** It was built (Startup-folder shortcut via
+PowerShell `WScript.Shell`) and then removed: for v1 the user runs `start.bat`
+after a reboot, full stop. Don't re-add it without being asked.
+
 What exists instead:
-- **Autostart toggle** (`lib/Autostart.js`) writes a `.lnk` into the Startup folder
-  via PowerShell's `WScript.Shell`, `WindowStyle = 7` (minimized). Windows-only; the
-  dashboard row hides itself elsewhere. The manual alternative is Win+R →
-  `shell:startup`, which this audience will not do.
 - **Stop button** on the dashboard → `POST /api/shutdown`. The only other off switch
   is closing an unlabelled black window.
 

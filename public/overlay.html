@@ -40,23 +40,20 @@
     'top-right':    'left:auto; right:26px; top:26px; bottom:auto; --nbk-exit:135%;',
   };
 
-  // Per-source overrides from the URL, e.g. ?scale=2&corner=top-right
-  //
-  // This page feeds EVERY browser source, so one horizontal and one vertical
-  // overlay are usually running at the same time off the same file. A single
-  // dashboard setting can only ever be right for one of them, so the URL wins:
-  // each OBS source carries its own size and corner, and the dashboard values
-  // are just the default for sources that don't specify.
-  const QS = new URLSearchParams(location.search);
-  const QS_SCALE = QS.has('scale') ? Number(QS.get('scale')) : null;
-  const QS_CORNER = QS.get('corner');
+  // ?type=vertical picks the vertical size/corner from the dashboard; anything
+  // else uses the normal ones. This page feeds EVERY browser source, so a
+  // horizontal and a vertical overlay usually run at the same time and need
+  // different answers — the URL says WHICH overlay this is, and the dashboard
+  // says what it should look like. No numbers in the URL.
+  const IS_VERTICAL = new URLSearchParams(location.search).get('type') === 'vertical';
 
   function applyLayout(s) {
-    let scale = Number(s && s.overlayScale) || 1;
-    let corner = CORNERS[s && s.overlayCorner] ? s.overlayCorner : 'bottom-left';
+    s = s || {};
+    const rawScale = IS_VERTICAL ? s.verticalScale : s.overlayScale;
+    const rawCorner = IS_VERTICAL ? s.verticalCorner : s.overlayCorner;
 
-    if (QS_SCALE && isFinite(QS_SCALE) && QS_SCALE > 0) scale = QS_SCALE;
-    if (QS_CORNER && CORNERS[QS_CORNER]) corner = QS_CORNER;
+    const scale = Number(rawScale) > 0 ? Number(rawScale) : (IS_VERTICAL ? 2 : 1);
+    const corner = CORNERS[rawCorner] ? rawCorner : (IS_VERTICAL ? 'top-left' : 'bottom-left');
 
     let el = document.getElementById('nbk-layout');
     if (!el) {

@@ -21,7 +21,6 @@ const { WebSocketServer } = require('ws');
 
 const settings = require('./lib/Settings');
 const auth = require('./lib/TwitchAuth');
-const autostart = require('./lib/Autostart');
 const NotesService = require('./lib/NotesService');
 const TwitchChat = require('./lib/adapters/TwitchChat');
 
@@ -229,7 +228,10 @@ class StreamNotebookServer {
         const s = settings.get();
         const payload = JSON.stringify({
             event: 'notebook:layout',
-            data: { overlayScale: s.overlayScale, overlayCorner: s.overlayCorner },
+            data: {
+                overlayScale: s.overlayScale, overlayCorner: s.overlayCorner,
+                verticalScale: s.verticalScale, verticalCorner: s.verticalCorner,
+            },
         });
         this.wss.clients.forEach(c => { if (c.readyState === 1) { try { c.send(payload); } catch (_) {} } });
     }
@@ -272,23 +274,6 @@ class StreamNotebookServer {
         this.app.post('/api/notes/note/:id/unarchive', (req, res) => withNotes(res, s => s.mgmtUnarchiveNote(+req.params.id)));
         this.app.post('/api/notes/chapter/:id/unarchive-all', (req, res) => withNotes(res, s => s.mgmtUnarchiveAll(+req.params.id)));
         this.app.post('/api/notes/overlay', (req, res) => withNotes(res, s => ({ state: s.mgmtOverlay(req.body.action) })));
-
-        // ── Start with Windows ──
-        // Creates/removes a Startup-folder shortcut. The manual equivalent is
-        // Win+R -> shell:startup -> right-drag, which this audience will not do.
-        this.app.get('/api/autostart', (req, res) => res.json({
-            ok: true, supported: autostart.supported(), enabled: autostart.isEnabled(),
-        }));
-
-        this.app.post('/api/autostart', async (req, res) => {
-            try {
-                if (req.body && req.body.enabled) await autostart.enable();
-                else await autostart.disable();
-                res.json({ ok: true, supported: autostart.supported(), enabled: autostart.isEnabled() });
-            } catch (err) {
-                res.status(400).json({ ok: false, error: err.message });
-            }
-        });
 
         // ── Stop the notebook from the dashboard ──
         // Otherwise the only way to stop it is closing a black console window,
