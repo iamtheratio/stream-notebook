@@ -119,7 +119,8 @@ class StreamNotebookServer {
             });
             if (!res.ok) return false;
             const body = await res.json();
-            return body && body.ok === true && typeof body.overlayUrl === 'string';
+            // Must be OUR marker. Another app on this port answering 200 is not us.
+            return !!body && body.app === 'stream-notebook';
         } catch (_) {
             return false; // nothing there, or something that isn't us
         }
@@ -238,7 +239,14 @@ class StreamNotebookServer {
     _routes() {
         this.app.use(express.json());
         this.app.use(express.static(path.join(__dirname, 'public')));
-        this.app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
+        // Friendly aliases. People type the name of the thing they want rather
+        // than remembering that the dashboard lives at the bare root.
+        const page = f => (req, res) => res.sendFile(path.join(__dirname, 'public', f));
+        this.app.get('/', page('dashboard.html'));
+        this.app.get('/dashboard', page('dashboard.html'));
+        this.app.get('/settings', page('dashboard.html'));
+        this.app.get('/notes', page('notes.html'));
+        this.app.get('/overlay', page('overlay.html'));
 
         // ── Notes management API (backs public/notes.html) ──
         // Every mutation goes THROUGH NotesService so it persists to SQLite and
@@ -321,6 +329,11 @@ class StreamNotebookServer {
         // ── Live status for the dashboard header ──
         this.app.get('/api/status', (req, res) => res.json({
             ok: true,
+            // Identifies us to findExisting(). Port 8765 is shared with the user's
+            // own Websocket Server, so "something answered" is NOT proof it's us —
+            // without this marker a second app on the port could make Stream
+            // Notebook refuse to start and open the wrong dashboard.
+            app: 'stream-notebook',
             chat: this.chatStatus,
             twitch: auth.status(),
             game: this.notes.currentGame ? this.notes.currentGame.name : null,
