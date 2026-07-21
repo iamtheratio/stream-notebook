@@ -199,6 +199,29 @@
       <input type="text" id="overlay-url" readonly value="http://localhost:8765/overlay.html">
       <button class="primary" onclick="copyUrl()">Copy</button>
     </div>
+
+    <!-- Each browser source carries its own size/corner in the URL, so a -->
+    <!-- horizontal and a vertical overlay can run at once off this page.  -->
+    <details class="advanced" style="margin-top:14px">
+      <summary>Also streaming vertically? (TikTok, Shorts)</summary>
+      <p class="hint" style="margin:6px 0 10px">
+        Add a <b>second</b> browser source on your vertical scene, sized to your
+        vertical canvas (usually <b>1080 × 1920</b>), and use this URL instead.
+        It’s the same notebook — the extra bit on the end just makes it bigger and
+        puts it top-left, which suits a tall screen. Your horizontal overlay is
+        unaffected.
+      </p>
+      <div class="url-box">
+        <input type="text" id="overlay-url-vertical" readonly>
+        <button class="primary" onclick="copyUrl('overlay-url-vertical')">Copy</button>
+      </div>
+      <p class="setup-note" style="margin:8px 0 0">
+        Tweak <code>scale</code> (0.75–3) and <code>corner</code>
+        (<code>bottom-left</code>, <code>bottom-right</code>, <code>top-left</code>,
+        <code>top-right</code>) in the URL to taste. Any source without them uses
+        the size and position set in Options below.
+      </p>
+    </details>
   </div>
 
   <!-- Step 3 — try it. The required path ends here; everything below is optional. -->
@@ -560,8 +583,8 @@ async function overlay(action) {
   toast(r.ok ? 'Overlay: ' + action : 'Failed', !r.ok);
 }
 
-function copyUrl() {
-  const el = document.getElementById('overlay-url');
+function copyUrl(id) {
+  const el = document.getElementById(id || 'overlay-url');
   navigator.clipboard.writeText(el.value)
     .then(() => toast('Overlay URL copied — paste it into OBS'))
     .catch(() => { el.select(); toast('Press Ctrl+C to copy'); });
@@ -608,7 +631,13 @@ async function refresh() {
   setPill('p-game', st.game ? 'ok' : 'warn', st.game || 'Not detected yet');
   setPill('p-db', st.persists ? 'ok' : 'bad', st.persists ? 'Saving notes' : 'Not saving');
 
-  if (st.overlayUrl) document.getElementById('overlay-url').value = st.overlayUrl;
+  if (st.overlayUrl) {
+    document.getElementById('overlay-url').value = st.overlayUrl;
+    // Same page, per-source overrides appended — a vertical canvas wants it
+    // bigger and out of the way of the bottom-of-screen UI most apps overlay.
+    document.getElementById('overlay-url-vertical').value =
+      st.overlayUrl + '?scale=2&corner=top-left';
+  }
 
   // Activity log
   const log = document.getElementById('log');

@@ -53,13 +53,16 @@
     /* shadow lives on .nbk-cover as a box-shadow — a filter:drop-shadow here would
        rasterize the whole subtree and soften the emote images. */
   }
-  /* Swipe in from / out to the left (like the !card overlay). */
-  .nbk-book.nbk-off { transform: translateX(-135%); opacity:0; }
+  /* Swipe out to the nearest edge (like the !card overlay). --nbk-exit lets the
+     host page flip it: a notebook parked on the right should leave to the right,
+     not travel the full width of the screen to the left. Defaults to the
+     original left-hand exit when the host sets nothing. */
+  .nbk-book.nbk-off { transform: translateX(var(--nbk-exit, -135%)); opacity:0; }
   /* Same swipe as .nbk-off, deliberately: a game/chapter change should read as
      "the notebook left and a different one came back". It used to shrink and
      fade in place, which looked like a glitch next to the show/hide swipe.
      Kept as its own class so it can't fight the .nbk-off visibility state. */
-  .nbk-book.nbk-closing { transform: translateX(-135%); opacity:0; }
+  .nbk-book.nbk-closing { transform: translateX(var(--nbk-exit, -135%)); opacity:0; }
   .nbk-cover {
     position:absolute; inset:-14px; border-radius:9px;
     background:

@@ -30,16 +30,33 @@
   // transform promotes it to a composited layer, which makes CEF bilinear-sample
   // the emote images and blur the text. `zoom` re-lays-out and rasterizes at the
   // new size, so it stays crisp at any scale.
+  // --nbk-exit is the direction the notebook swipes away to. It must match the
+  // side it's parked on, or it travels the full width of the screen to leave —
+  // a right-hand notebook exiting left crosses everything on the way out.
   const CORNERS = {
-    'bottom-left':  'left:26px; right:auto; bottom:76px; top:auto;',
-    'bottom-right': 'left:auto; right:26px; bottom:76px; top:auto;',
-    'top-left':     'left:26px; right:auto; top:26px; bottom:auto;',
-    'top-right':    'left:auto; right:26px; top:26px; bottom:auto;',
+    'bottom-left':  'left:26px; right:auto; bottom:76px; top:auto; --nbk-exit:-135%;',
+    'bottom-right': 'left:auto; right:26px; bottom:76px; top:auto; --nbk-exit:135%;',
+    'top-left':     'left:26px; right:auto; top:26px; bottom:auto; --nbk-exit:-135%;',
+    'top-right':    'left:auto; right:26px; top:26px; bottom:auto; --nbk-exit:135%;',
   };
 
+  // Per-source overrides from the URL, e.g. ?scale=2&corner=top-right
+  //
+  // This page feeds EVERY browser source, so one horizontal and one vertical
+  // overlay are usually running at the same time off the same file. A single
+  // dashboard setting can only ever be right for one of them, so the URL wins:
+  // each OBS source carries its own size and corner, and the dashboard values
+  // are just the default for sources that don't specify.
+  const QS = new URLSearchParams(location.search);
+  const QS_SCALE = QS.has('scale') ? Number(QS.get('scale')) : null;
+  const QS_CORNER = QS.get('corner');
+
   function applyLayout(s) {
-    const scale = Number(s && s.overlayScale) || 1;
-    const corner = CORNERS[s && s.overlayCorner] ? s.overlayCorner : 'bottom-left';
+    let scale = Number(s && s.overlayScale) || 1;
+    let corner = CORNERS[s && s.overlayCorner] ? s.overlayCorner : 'bottom-left';
+
+    if (QS_SCALE && isFinite(QS_SCALE) && QS_SCALE > 0) scale = QS_SCALE;
+    if (QS_CORNER && CORNERS[QS_CORNER]) corner = QS_CORNER;
 
     let el = document.getElementById('nbk-layout');
     if (!el) {
