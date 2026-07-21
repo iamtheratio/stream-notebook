@@ -63,8 +63,9 @@ off.
 The very first time, it spends a minute or two setting itself up. After that it
 starts in a couple of seconds.
 
-Your web browser then opens by itself to the dashboard. If it doesn't, type
-**localhost:8765** into your browser's address bar.
+Your web browser then opens by itself to the dashboard. If it doesn't, the black
+window prints the address — type that into your browser. It's usually
+**localhost:8765**.
 
 > **Windows may warn you about the file.** If you see "Windows protected your PC",
 > click **More info** → **Run anyway**. That warning appears for anything
@@ -100,27 +101,28 @@ A settings window opens. Fill it in like this:
 
 | Field | What to put |
 |---|---|
-| **URL** | `http://localhost:8765/overlay.html` |
+| **URL** | Click **Copy** on the dashboard, then paste it here |
 | **Width** | `1920` |
 | **Height** | `1080` |
-| **Shutdown source when not visible** | ✅ tick this |
-| **Refresh browser when scene becomes active** | ✅ tick this |
+
+Leave everything else alone.
 
 **Also stream vertically (TikTok, Shorts)?** Add a **second** browser source on
-your vertical scene:
+your vertical scene, and use the dashboard's **vertical** Copy button:
 
 | Field | What to put |
 |---|---|
-| **URL** | `http://localhost:8765/overlay.html?type=vertical` |
+| **URL** | The **vertical** URL from the dashboard |
 | **Width** | `1080` |
 | **Height** | `1920` |
 
 Both can run at the same time, and each has its own position and size in the
-dashboard. The dashboard has a **Copy** button for each URL — you don't have to
-type them.
+dashboard.
 
-<!-- SCREENSHOT: OBS browser source dialog, fields filled in, tickboxes ticked -->
 ![The OBS browser source window, filled in](docs/img/03-obs-browser-source.png)
+
+<sub>Always copy the URL from your own dashboard rather than typing one from this
+page — the number in it can differ from machine to machine.</sub>
 
 Click **OK**. Don't worry that nothing appears yet — **the notebook is invisible
 until there's a note to show.** That's on purpose, so it isn't sitting on your
@@ -203,7 +205,8 @@ spam-flicker your overlay. You and your mods are exempt.
 
 ## The dashboard
 
-**http://localhost:8765** — everything is configured here. There are no config
+The page that opens when you start the notebook — usually
+**http://localhost:8765**. Everything is configured here. There are no config
 files to edit.
 
 - **Status** — Twitch, chat, current game, and whether notes are saving
@@ -213,8 +216,8 @@ files to edit.
 
 ### Manage Notes
 
-**http://localhost:8765/notes.html** — a full editor for every note you've ever
-taken, across every game. Add, edit, reorder, rename chapters, delete old games.
+The **Manage Notes** link at the top of the dashboard — a full editor for every
+note you've ever taken, across every game. Add, edit, reorder, rename chapters, delete old games.
 Edits to the game you're currently playing show up on stream instantly.
 
 Useful for prepping a run in advance, or cleaning up after a long stream.
