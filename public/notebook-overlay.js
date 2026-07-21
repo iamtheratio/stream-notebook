@@ -289,6 +289,14 @@
   let hideTimer = null;
   const AUTO_HIDE_MS = 20000;
 
+  // Set while the notebook is swiping off screen for a game/chapter change. The
+  // service fires note:notebook and note:render back to back, so without this the
+  // notes swap ~immediately and you watch the old book turn into the new one on
+  // its way out. Renders that arrive mid-swipe are held and applied once it is
+  // actually off screen; only the newest matters, so it's a single slot.
+  let swapping = false;
+  let pendingRender = null;
+
   function esc(s){ return String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 
   function showBook() { clearTimeout(hideTimer); hideTimer = null; bookEl.classList.remove('nbk-off'); }
@@ -538,8 +546,14 @@
   // sub-page flips still use .nbk-turn — see gotoPage.)
   function onNotebookChange() {
     if (bookEl.classList.contains('nbk-off')) return; // hidden: nothing to swipe
+    swapping = true;
     bookEl.classList.add('nbk-closing');
-    setTimeout(() => bookEl.classList.remove('nbk-closing'), 540);
+    setTimeout(() => {
+      // Off screen now — swap the contents where nobody can see it, then return.
+      swapping = false;
+      if (pendingRender) { const d = pendingRender; pendingRender = null; render(d); }
+      bookEl.classList.remove('nbk-closing');
+    }, 540);
   }
   function onClear() { burnEl.classList.remove('nbk-go'); void burnEl.offsetWidth; burnEl.classList.add('nbk-go'); }
 
@@ -556,7 +570,9 @@
     handle(event, data) {
       data = data || {};
       switch (event) {
-        case 'note:render':        render(data); return true;
+        // Held until the swipe-out finishes, so the notes never change on screen.
+        case 'note:render':        if (swapping) { pendingRender = data; return true; }
+                                   render(data); return true;
         case 'note:notebook':      onNotebookChange(); return true;
         case 'note:page':          gotoPage(data); return true;
         case 'note:animate:clear': clearingAll = true; return true; // next render fades the notes out

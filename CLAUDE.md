@@ -221,6 +221,23 @@ on the `note:render` payloads.
 Check what's in there before and clean up after, or you'll leave junk in the user's
 notebook.
 
+**Overlay animations can't be verified by reading the code.** A swipe was once
+"fixed" by checking the CSS looked right; it still swapped the notes on screen,
+because the service fires `note:notebook` and `note:render` back to back and the
+render landed at ~30ms into a 500ms swipe. Drive it in a real browser instead —
+Edge is present on this machine and takes virtual time:
+
+```powershell
+& "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --headless=new `
+  --disable-gpu --virtual-time-budget=4000 --dump-dom "file:///<page>" > dump.html
+```
+
+Build a page that loads `notebook-overlay.js`, drives `NotesOverlay.handle()` with
+a payload shaped like `buildState()`, samples class + rendered title every 30ms,
+and writes the timeline into the DOM for `--dump-dom` to capture. **Then run it
+against the previous commit** (`git show HEAD:public/notebook-overlay.js`) and
+confirm it fails — an animation test that passes both ways is testing nothing.
+
 Useful checks that have caught real bugs:
 - Boot twice to exercise the port walk (the `wss` error bug surfaced this way).
 - Extract the dashboard's inline `<script>`, `vm.Script` it for syntax, and confirm
