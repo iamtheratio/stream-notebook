@@ -55,7 +55,11 @@
   }
   /* Swipe in from / out to the left (like the !card overlay). */
   .nbk-book.nbk-off { transform: translateX(-135%); opacity:0; }
-  .nbk-book.nbk-closing { transform: rotateX(8deg) scale(.97); opacity:0; }
+  /* Same swipe as .nbk-off, deliberately: a game/chapter change should read as
+     "the notebook left and a different one came back". It used to shrink and
+     fade in place, which looked like a glitch next to the show/hide swipe.
+     Kept as its own class so it can't fight the .nbk-off visibility state. */
+  .nbk-book.nbk-closing { transform: translateX(-135%); opacity:0; }
   .nbk-cover {
     position:absolute; inset:-14px; border-radius:9px;
     background:
@@ -526,12 +530,16 @@
   }
 
   // ── Flourishes ────────────────────────────────────────────────────────────
+  // Swipe fully off to the left, swap contents while it's off screen, swipe back.
+  // The 540ms clears the .nbk-book transform transition (.5s) — cutting it short
+  // reverses mid-swipe, so the notebook never actually leaves and you see it
+  // stall and bounce instead. No .nbk-turn here on purpose: the notes changed
+  // off screen, so a page-turn on top of the swipe is invisible noise. (Real
+  // sub-page flips still use .nbk-turn — see gotoPage.)
   function onNotebookChange() {
+    if (bookEl.classList.contains('nbk-off')) return; // hidden: nothing to swipe
     bookEl.classList.add('nbk-closing');
-    setTimeout(() => {
-      bookEl.classList.remove('nbk-closing');
-      notesEl.classList.remove('nbk-turn'); void notesEl.offsetWidth; notesEl.classList.add('nbk-turn');
-    }, 300);
+    setTimeout(() => bookEl.classList.remove('nbk-closing'), 540);
   }
   function onClear() { burnEl.classList.remove('nbk-go'); void burnEl.offsetWidth; burnEl.classList.add('nbk-go'); }
 
